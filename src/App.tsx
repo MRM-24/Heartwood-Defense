@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import GameScreen from './components/GameScreen';
 import { GuideModal, LevelSelect, LoadoutScreen, TitleScreen, WorldSelect } from './components/Screens';
 import { LEVELS, unlockedFloraFor } from './game/data';
+import { setBgmMuted, startBgm } from './game/bgm';
 import { loadSave, recordWin, setMuted as persistMuted, type SaveData } from './game/save';
 import { setSfxMuted } from './game/sfx';
 import type { FloraKey, LevelDef } from './game/types';
@@ -21,7 +22,20 @@ export default function App() {
 
   useEffect(() => {
     setSfxMuted(save.muted);
+    setBgmMuted(save.muted);
   }, [save.muted]);
+
+  // Start the BGM on the first user gesture (browser autoplay policy).
+  // startBgm() is idempotent, so it's safe to bind to every input.
+  useEffect(() => {
+    const boot = () => startBgm();
+    window.addEventListener('pointerdown', boot, { passive: true });
+    window.addEventListener('keydown', boot);
+    return () => {
+      window.removeEventListener('pointerdown', boot);
+      window.removeEventListener('keydown', boot);
+    };
+  }, []);
 
   const hasSave = useMemo(() => save.maxLevel > 0 || Object.keys(save.stars).length > 0, [save]);
 
