@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ENEMIES, FLORA } from '../game/data';
 import type { PlaceResult } from '../game/engine';
 import { COLS, LANES, type EnemyEnt, type FloraEnt, type Fx, type GameState } from '../game/types';
-import { EnemySprite, FloraSprite, HeartTree, ProjSprite, SnareGlyph } from './sprites';
+import { EnemySprite, EProjSprite, FloraSprite, HeartTree, ProjSprite, SnareGlyph } from './sprites';
 
 export const STAGE_W = 1080;
 export const STAGE_H = 600;
@@ -22,6 +22,13 @@ const ENEMY_GLOW: Record<string, string> = {
   drifter: 'rgba(215,140,255,.55)',
   brute: 'rgba(255,110,140,.5)',
   colossus: 'rgba(255,90,110,.6)',
+  vaulter: 'rgba(200,240,90,.45)',
+  grub: 'rgba(180,175,160,.5)',
+  larva: 'rgba(130,210,185,.4)',
+  ranger: 'rgba(220,190,100,.45)',
+  imp: 'rgba(255,130,230,.5)',
+  husk: 'rgba(255,150,70,.45)',
+  thief: 'rgba(150,190,240,.5)',
 };
 const FLORA_GLOW: Record<string, string> = {
   thornvine: 'rgba(125,255,176,.4)',
@@ -157,6 +164,28 @@ export default function Board({ s, alpha, onCell }: Props) {
           }),
         )}
 
+        {/* Tunnel Larva no-go zone: columns the burrowers ignore (cols 6–8) */}
+        {s.level.waves.some((w) => w.groups.some((g) => g.type === 'larva')) && (
+          <div
+            className="pointer-events-none absolute z-[8]"
+            style={{ left: px(6), top: GRID_Y, width: CELL_W * 3, height: CELL_H * LANES }}
+            title="Tunnel Larva burrow beneath these columns — plants here won't stop them"
+          >
+            <div
+              className="h-full w-full opacity-[.16]"
+              style={{
+                background:
+                  'repeating-linear-gradient(135deg, #6b5433 0 10px, transparent 10px 22px)',
+                maskImage: 'linear-gradient(180deg, transparent, black 30%)',
+                WebkitMaskImage: 'linear-gradient(180deg, transparent, black 30%)',
+              }}
+            />
+            <div className="absolute -top-[1px] left-1 rounded bg-[#33270f]/90 px-1.5 font-ui text-[10px] font-bold tracking-wider text-[#c9a86a]">
+              BURROWED
+            </div>
+          </div>
+        )}
+
         {/* lane root separators */}
         {Array.from({ length: LANES - 1 }).map((_, i) => (
           <div key={i} className="absolute" style={{ left: GRID_X + 4, top: laneY(i + 1) - 1, width: COLS * CELL_W - 8, height: 2, background: 'linear-gradient(90deg, rgba(127,215,127,.16), rgba(127,215,127,.05))' }} />
@@ -224,6 +253,27 @@ export default function Board({ s, alpha, onCell }: Props) {
               }}
             >
               <ProjSprite kind={p.kind} />
+            </div>
+          );
+        })}
+
+        {/* enemy spines (Locust Rangers) */}
+        {s.eprojs.map((p) => {
+          const x = p.prevX + (p.x - p.prevX) * alpha;
+          return (
+            <div
+              key={p.id}
+              className="pointer-events-none absolute"
+              style={{
+                left: px(x) - 15,
+                top: laneY(p.lane) + CELL_H / 2 - 16,
+                width: 30,
+                height: 12,
+                zIndex: 58,
+                filter: 'drop-shadow(0 0 6px rgba(255,207,107,.8))',
+              }}
+            >
+              <EProjSprite />
             </div>
           );
         })}
@@ -299,23 +349,69 @@ function EnemyView({ e, alpha }: { e: EnemyEnt; alpha: number }) {
   const w = 80 * (e.key === 'colossus' ? 2.2 : scale);
   const flyLift = def.flying ? 36 : 0;
   const slowed = e.slowPct > 0; // engine clears slowUntil, but tint is fine while flagged
+  // Mite Vaulter mid-leap: rising arc offset
+  const jumpProg = e.jumpT > 0 ? 1 - e.jumpT / 0.45 : 0;
+  const arcLift = jumpProg > 0 ? Math.sin(jumpProg * Math.PI) * 52 : 0;
+  const windupFrac = def.smashWindup ? Math.min(1, e.windup / def.smashWindup) : 0;
+  const fleeing = !!e.carrying; // Root Thief running loot home
   return (
     <div
       className="pointer-events-none absolute"
       style={{
         left: px(ex) - w / 2,
-        top: laneY(e.lane) + CELL_H - 6 - w - flyLift,
+        top: laneY(e.lane) + CELL_H - 6 - w - flyLift - arcLift,
         width: w,
         height: w,
-        zIndex: 24 + e.lane + (def.flying ? 30 : 0),
-        filter: `drop-shadow(0 0 8px ${ENEMY_GLOW[e.key]}) ${e.hitFlash > 0 ? 'brightness(2) saturate(1.6)' : ''} ${slowed ? 'drop-shadow(0 0 6px rgba(140,215,255,.8)) hue-rotate(-12deg)' : ''}`,
-        transform: `${e.chewing ? 'translateX(-2px) rotate(-1.5deg)' : ''}`,
+        zIndex:
+          e.burrowed
+            ? 12 + e.lane // the dirt mound slides beneath everything
+            : 24 + e.lane + (def.flying ? 30 : 0),
+        filter: `drop-shadow(0 0 8px ${ENEMY_GLOW[e.key]}) ${e.hitFlash > 0 ? 'brightness(2) saturate(1.6)' : ''} ${slowed ? 'drop-shadow(0 0 6px rgba(140,215,255,.8)) hue-rotate(-12deg)' : ''} ${e.stunT > 0 ? 'saturate(.6) brightness(.85)' : ''}`,
+        transform: `${e.chewing ? 'translateX(-2px) rotate(-1.5deg)' : ''} ${e.jumpT > 0 ? `rotate(${jumpProg * -14}deg)` : ''} ${fleeing ? 'scaleX(-1)' : ''}`,
+        opacity: e.burrowed ? 0.85 : 1,
       }}
     >
       {/* spawn fade-in */}
       <div className="h-full w-full anim-fadein" style={{ animationDuration: '0.35s' }}>
-        <EnemySprite k={e.key} shellFrac={e.maxShell ? e.shell / e.maxShell : 0} phase={e.phase} />
+        <EnemySprite
+          k={e.key}
+          shellFrac={e.maxShell ? e.shell / e.maxShell : 0}
+          phase={e.phase}
+          stoneFrac={e.maxStone ? e.stone / e.maxStone : 0}
+          burrowed={e.burrowed}
+          windupFrac={windupFrac}
+          carrying={fleeing}
+        />
       </div>
+      {/* the hauled Flora, held aloft */}
+      {fleeing && e.carrying && (
+        <div
+          className="absolute anim-bob"
+          style={{ left: w / 2 - 26, top: -46, width: 52, height: 56, filter: 'drop-shadow(0 3px 6px rgba(0,0,0,.5))', zIndex: 1 }}
+        >
+          <FloraSprite k={e.carrying.key} hpFrac={e.carrying.hp / e.carrying.maxHp} />
+        </div>
+      )}
+      {/* husk smash telegraph: a shrinking ring over the doomed plant */}
+      {windupFrac > 0 && (
+        <div
+          className="pointer-events-none absolute left-1/2 -translate-x-1/2"
+          style={{ top: w + 2, width: 64, height: 8 }}
+        >
+          <div className="absolute inset-y-0 left-0 w-full overflow-hidden rounded-full border border-[#ff5d7c]/60 bg-[#1a0a10]/90">
+            <div
+              className="h-full"
+              style={{ width: `${windupFrac * 100}%`, background: windupFrac > 0.6 ? '#ff3d3d' : '#ff9a3d' }}
+            />
+          </div>
+        </div>
+      )}
+      {/* stoneback slab pips (above hp bar) */}
+      {e.maxStone > 0 && e.stone > 0 && (
+        <div className="absolute left-1/2 -translate-x-1/2" style={{ top: -8, width: 46, height: 5, background: 'rgba(8,16,14,.85)', borderRadius: 3, border: '1px solid rgba(200,195,175,.5)' }}>
+          <div className="h-full rounded-[2px]" style={{ width: `${(e.stone / e.maxStone) * 100}%`, background: 'linear-gradient(90deg,#b9b3a4,#e8e2cf)' }} />
+        </div>
+      )}
       {/* shell pips */}
       {e.maxShell > 0 && e.shell > 0 && (
         <div className="absolute left-1/2 -translate-x-1/2" style={{ top: -8, width: 46, height: 5, background: 'rgba(8,16,14,.85)', borderRadius: 3, border: '1px solid rgba(103,224,198,.4)' }}>
@@ -323,10 +419,14 @@ function EnemyView({ e, alpha }: { e: EnemyEnt; alpha: number }) {
         </div>
       )}
       {/* hp bar for damaged enemies (kept slim to avoid clutter) */}
-      {!def.boss && e.hp < e.maxHp && (
-        <div className="absolute left-1/2 -translate-x-1/2" style={{ top: e.maxShell > 0 && e.shell > 0 ? -15 : -8, width: 40, height: 4, background: 'rgba(8,16,14,.85)', borderRadius: 2 }}>
+      {!def.boss && !e.burrowed && e.hp < e.maxHp && (
+        <div className="absolute left-1/2 -translate-x-1/2" style={{ top: (e.maxShell > 0 && e.shell > 0) || (e.maxStone > 0 && e.stone > 0) ? -15 : -8, width: 40, height: 4, background: 'rgba(8,16,14,.85)', borderRadius: 2 }}>
           <div className="h-full rounded-[2px]" style={{ width: `${(e.hp / e.maxHp) * 100}%`, background: '#ff7d95' }} />
         </div>
+      )}
+      {/* stunned imp: seeing spores */}
+      {e.stunT > 0 && (
+        <div className="absolute left-1/2 -translate-x-1/2 anim-twinkle" style={{ top: -20, fontSize: 15, letterSpacing: 4 }}>✦✧✦</div>
       )}
     </div>
   );
@@ -399,6 +499,120 @@ function FxView({ fx }: { fx: Fx }) {
     return (
       <div className="pointer-events-none absolute z-[64]" style={{ left: px(fx.x) - 70, top: laneY(fx.lane) + CELL_H / 2 - 76 }}>
         <div className="anim-shockwave rounded-full border-4 border-[#ff9a3d]" style={{ width: 140, height: 140 }} />
+      </div>
+    );
+  }
+  // ── Batch 1 fx ──
+  if (fx.kind === 'stolen') {
+    return (
+      <div
+        className="anim-floatup pointer-events-none absolute z-[80] whitespace-nowrap font-ui text-[18px] font-extrabold"
+        style={{ left: px(fx.x) - 34, top: laneY(fx.lane) + 22, color: '#ff7d95', textShadow: '0 0 10px rgba(255,93,124,.8), 0 2px 2px rgba(0,0,0,.6)' }}
+      >
+        STOLEN!
+      </div>
+    );
+  }
+  if (fx.kind === 'cata') {
+    // incoming Spore Imp: a target reticle burning into the tile
+    return (
+      <div className="pointer-events-none absolute z-[56]" style={{ left: px(fx.x) - CELL_W / 2, top: laneY(fx.lane), width: CELL_W, height: CELL_H }}>
+        <div className="anim-pulse-ring absolute inset-2 rounded-xl border-2 border-dashed border-[#ff5d7c]/85" style={{ background: 'radial-gradient(circle, rgba(255,93,124,.16), transparent 70%)' }} />
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-ui text-[22px] font-black text-[#ff9db1] anim-breathe">✕</div>
+      </div>
+    );
+  }
+  if (fx.kind === 'land') {
+    return (
+      <div className="pointer-events-none absolute z-[64]" style={{ left: px(fx.x) - 34, top: laneY(fx.lane) + CELL_H / 2 - 38 }}>
+        <div className="anim-shockwave rounded-full border-4 border-[#c9a86a]" style={{ width: 68, height: 68 }} />
+        {Array.from({ length: 6 }).map((_, i) => {
+          const a = (i / 6) * Math.PI * 2 + 0.4;
+          return (
+            <div
+              key={i}
+              className="anim-burst absolute rounded-full"
+              style={{ width: 7, height: 7, left: 30, top: 30, background: '#8a6f4c', ['--bx' as string]: `${Math.cos(a) * 32}px`, ['--by' as string]: `${Math.sin(a) * 22 - 10}px` }}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+  if (fx.kind === 'dirt' || fx.kind === 'emerge') {
+    const big = fx.kind === 'emerge';
+    return (
+      <div className="pointer-events-none absolute z-[64]" style={{ left: px(fx.x) - (big ? 40 : 24), top: laneY(fx.lane) + CELL_H / 2 - (big ? 34 : 30) }}>
+        <div className="anim-puff rounded-full" style={{ width: big ? 80 : 48, height: big ? 54 : 40, background: 'radial-gradient(circle, #7a614255 0%, transparent 70%)' }} />
+        {Array.from({ length: big ? 8 : 5 }).map((_, i) => {
+          const a = (i / (big ? 8 : 5)) * Math.PI * 2 + 0.7;
+          return (
+            <div
+              key={i}
+              className="anim-burst absolute rounded-full"
+              style={{ width: 6 + (i % 2) * 3, height: 6 + (i % 2) * 3, left: big ? 36 : 20, top: big ? 24 : 18, background: i % 2 ? '#8a6f4c' : '#5a4630', ['--bx' as string]: `${Math.cos(a) * (big ? 46 : 28)}px`, ['--by' as string]: `${Math.sin(a) * (big ? 30 : 20) - 12}px` }}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+  if (fx.kind === 'smash') {
+    return (
+      <div className="pointer-events-none absolute z-[66]" style={{ left: px(fx.x) - 50, top: laneY(fx.lane) + CELL_H / 2 - 56 }}>
+        <div className="anim-shockwave rounded-full border-4 border-[#ffb37a]" style={{ width: 100, height: 100 }} />
+        <div className="anim-puff absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,154,61,.4) 0%, transparent 65%)' }} />
+        {Array.from({ length: 7 }).map((_, i) => {
+          const a = (i / 7) * Math.PI * 2;
+          return (
+            <div
+              key={i}
+              className="anim-burst absolute rounded-sm"
+              style={{ width: 9, height: 5, left: 46, top: 46, background: '#c9a86a', transform: `rotate(${i * 51}deg)`, ['--bx' as string]: `${Math.cos(a) * 52}px`, ['--by' as string]: `${Math.sin(a) * 36}px` }}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+  if (fx.kind === 'grab') {
+    return (
+      <div className="pointer-events-none absolute z-[68]" style={{ left: px(fx.x) - 26, top: laneY(fx.lane) + CELL_H - 96 }}>
+        <div className="anim-floatup font-ui text-[19px] font-black" style={{ color: '#ffd76a', textShadow: '0 0 10px rgba(255,215,106,.7), 0 2px 2px rgba(0,0,0,.6)' }}>GRAB!</div>
+        <div className="anim-ringburst absolute -left-2 top-2 rounded-full border-2 border-[#ffd76a]" style={{ width: 52, height: 52 }} />
+      </div>
+    );
+  }
+  if (fx.kind === 'drop') {
+    return (
+      <div className="pointer-events-none absolute z-[68]" style={{ left: px(fx.x) - 24, top: laneY(fx.lane) + CELL_H / 2 - 30 }}>
+        <div className="anim-puff rounded-full" style={{ width: 48, height: 48, background: 'radial-gradient(circle, #a3f2a055 0%, transparent 70%)' }} />
+        <div className="anim-floatup absolute -top-4 left-0 font-ui text-[14px] font-extrabold" style={{ color: '#a3f2a0', textShadow: '0 1px 3px #000' }}>DROPPED</div>
+      </div>
+    );
+  }
+  if (fx.kind === 'shieldbreak') {
+    return (
+      <div className="pointer-events-none absolute z-[66]" style={{ left: px(fx.x) - 30, top: laneY(fx.lane) + CELL_H / 2 - 36 }}>
+        {Array.from({ length: 8 }).map((_, i) => {
+          const a = (i / 8) * Math.PI * 2 + 0.3;
+          return (
+            <div
+              key={i}
+              className="anim-burst absolute rounded-sm"
+              style={{ width: 8 + (i % 3) * 3, height: 6 + (i % 2) * 3, left: 26, top: 26, background: i % 2 ? '#c9c2b0' : '#8f8a7c', transform: `rotate(${i * 47}deg)`, ['--bx' as string]: `${Math.cos(a) * 42}px`, ['--by' as string]: `${Math.sin(a) * 30 - 8}px` }}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+  if (fx.kind === 'deflect') {
+    return (
+      <div className="pointer-events-none absolute z-[66]" style={{ left: px(fx.x) - 14, top: laneY(fx.lane) + CELL_H / 2 - 34 }}>
+        <svg viewBox="0 0 28 28" width={28} height={28} className="anim-pop">
+          <path d="M14 3 L 18 12 L 27 14 L 18 16 L 14 25 L 10 16 L 1 14 L 10 12 Z" fill="#fff3c4" stroke="#0d1b13" strokeWidth="1.6" />
+        </svg>
       </div>
     );
   }

@@ -2,9 +2,36 @@
 // Usage: npx esbuild scripts/sim.ts --bundle --platform=node --format=cjs --outfile=/tmp/sim.cjs && node /tmp/sim.cjs
 import { createGame, placeFlora, stepGame } from '../src/game/engine';
 import { FLORA, LEVELS, unlockedFloraFor } from '../src/game/data';
-import { TICK, type FloraKey, type GameState } from '../src/game/types';
+import { TICK, type EnemyKey, type FloraKey, type GameState, type LevelDef } from '../src/game/types';
 
 const GLOW_ORDER = [2, 0, 4, 1, 3];
+
+// Threat profile per level — the bot reads the intel like a player would.
+interface Threats {
+  larva: boolean;
+  imp: boolean;
+  grub: boolean;
+  husk: boolean;
+  thief: boolean;
+  vaulter: boolean;
+  ranger: boolean;
+  flyer: boolean;
+}
+function threatsOf(level: LevelDef): Threats {
+  const set = new Set<EnemyKey>();
+  for (const w of level.waves) for (const g of w.groups) set.add(g.type);
+  for (const k of level.addPool) set.add(k);
+  return {
+    larva: set.has('larva'),
+    imp: set.has('imp'),
+    grub: set.has('grub'),
+    husk: set.has('husk'),
+    thief: set.has('thief'),
+    vaulter: set.has('vaulter'),
+    ranger: set.has('ranger'),
+    flyer: set.has('drifter'),
+  };
+}
 
 function freeCol(s: GameState, lane: number, prefs: number[]): number {
   for (const c of prefs) if (!s.grid[lane][c]) return c;
@@ -17,7 +44,7 @@ function countFlora(s: GameState, lane: number, pred: (k: FloraKey) => boolean):
   return n;
 }
 
-function botAct(s: GameState) {
+function botAct(s: GameState, th: Threats) {
   if (s.status !== 'playing') return;
   const glowCount = GLOW_ORDER.reduce(
     (n, l) => n + s.grid[l].filter((f) => f?.key === 'glowbulb').length,
@@ -45,9 +72,11 @@ function botAct(s: GameState) {
     const ground = foes.filter((e) => e.key !== 'drifter');
     const skitters = ground.filter((e) => e.key === 'skitter').length;
     const boss = ground.some((e) => e.hp > 400);
+    const heavy = ground.some((e) => e.key === 'husk' || e.key === 'colossus'); // needs focus fire
     const attackers = countFlora(s, l, (k) => !!FLORA[k].attack);
     const walls = countFlora(s, l, (k) => k === 'bramble');
     const sentinels = countFlora(s, l, (k) => k === 'sentinel');
+    const splash = countFlora(s, l, (k) => k === 'cactus' || k === 'frostcap');
     const frontX = Math.min(...foes.map((e) => e.x));
 
     // anti-air is non-negotiable
@@ -55,6 +84,26 @@ function botAct(s: GameState) {
       if ((s.trayCd['sentinel'] ?? 0) <= 0 && s.nectar >= 175) {
         const c = freeCol(s, l, [3, 2, 4]);
         if (c >= 0 && placeFlora(s, 'sentinel', l, c) === 'ok') return;
+      }
+    }
+    // Stoneback Grubs: without splash in the lane they simply do not die
+    if (
+      th.grub &&
+      ground.some((e) => e.key === 'grub') &&
+      splash === 0 &&
+      (s.trayCd['cactus'] ?? 0) <= 0 &&
+      s.nectar >= 100
+    ) {
+      const c = freeCol(s, l, [3, 2, 4]);
+      if (c >= 0 && placeFlora(s, 'cactus', l, c) === 'ok') return;
+    }
+    // backline coverage: Tunnel Larva surface at col 6 and Spore Imps drop in
+    // behind the front — a shooter at col ≤ 2 catches both
+    if ((th.larva || th.imp) && countFlora(s, l, (k) => k === 'thornvine' && false) === 0) {
+      const backShooters = s.grid[l].filter((f, c) => f && FLORA[f.key].attack && c <= 2).length;
+      if (backShooters === 0 && (s.trayCd['thornvine'] ?? 0) <= 0 && s.nectar >= 50) {
+        const c = freeCol(s, l, [2, 1, 3]);
+        if (c >= 0 && placeFlora(s, 'thornvine', l, c) === 'ok') return;
       }
     }
     // first attacker anywhere threatened
@@ -71,15 +120,21 @@ function botAct(s: GameState) {
         if (c >= 0 && placeFlora(s, 'cactus', l, c) === 'ok') return;
       }
     }
-    // wall when the front is close
+    // wall when the front is close (never east of the larva emerge line)
     if (ground.length > 0 && walls === 0 && frontX < 6.4 && (s.trayCd['bramble'] ?? 0) <= 0 && s.nectar >= 75) {
-      const c = freeCol(s, l, [6, 5]);
+      const prefs = th.larva ? [5, 4] : th.vaulter ? [6, 5, 4] : [6, 5];
+      const c = freeCol(s, l, prefs);
       if (c >= 0 && placeFlora(s, 'bramble', l, c) === 'ok') return;
     }
-    // frost control for wardens/beetles mid-board
+    // a second wall behind the first eats Mite Vaulter leaps
+    if (th.vaulter && ground.some((e) => e.key === 'vaulter') && walls === 1 && frontX < 7.5 && (s.trayCd['bramble'] ?? 0) <= 0 && s.nectar >= 120) {
+      const c = freeCol(s, l, [5, 4, 3]);
+      if (c >= 0 && placeFlora(s, 'bramble', l, c) === 'ok') return;
+    }
+    // frost control for wardens/husks/beetles mid-board
     if (
       s.loadout.includes('frostcap') &&
-      ground.some((e) => e.key === 'warden' || e.key === 'colossus') &&
+      ground.some((e) => e.key === 'warden' || e.key === 'colossus' || e.key === 'husk' || e.key === 'beetle') &&
       countFlora(s, l, (k) => k === 'frostcap') === 0 &&
       (s.trayCd['frostcap'] ?? 0) <= 0 &&
       s.nectar >= 100
@@ -87,15 +142,26 @@ function botAct(s: GameState) {
       const c = freeCol(s, l, [2, 3]);
       if (c >= 0 && placeFlora(s, 'frostcap', l, c) === 'ok') return;
     }
-    // reinforce: second/third attacker, boss lanes get four
-    const want = boss ? 4 : 2;
+    // reinforce: second/third attacker; husks, bosses and thieves get four
+    const want = boss || heavy || (th.thief && ground.some((e) => e.key === 'thief')) ? 4 : 2;
     if (attackers < want && frontX < 8.5 && (s.trayCd['thornvine'] ?? 0) <= 0 && s.nectar >= 120) {
       const c = freeCol(s, l, [3, 2, 4, 5]);
       if (c >= 0 && placeFlora(s, 'thornvine', l, c) === 'ok') return;
     }
   }
 
-  // 3) spend surplus on thornvines in open lanes
+  // 3) proactive backline insurance for catapult/burrow levels (all lanes)
+  if (th.imp || th.larva) {
+    for (const l of [2, 1, 3, 0, 4]) {
+      const backShooters = s.grid[l].filter((f, c) => f && FLORA[f.key].attack && c <= 2).length;
+      if (backShooters === 0 && (s.trayCd['thornvine'] ?? 0) <= 0 && s.nectar >= 140) {
+        const c = freeCol(s, l, [2, 1, 3]);
+        if (c >= 0 && placeFlora(s, 'thornvine', l, c) === 'ok') return;
+      }
+    }
+  }
+
+  // 4) spend surplus on thornvines in open lanes
   if (s.nectar >= 220 && (s.trayCd['thornvine'] ?? 0) <= 0) {
     for (const l of [2, 1, 3, 0, 4]) {
       const attackers = countFlora(s, l, (k) => !!FLORA[k].attack);
@@ -109,13 +175,14 @@ function botAct(s: GameState) {
 
 let allWin = true;
 for (const level of LEVELS) {
+  const th = threatsOf(level);
   const loadout = unlockedFloraFor(level.id);
   const s = createGame(level, loadout);
   let actionT = 0;
-  while (s.status === 'playing' && s.t < 800) {
+  while (s.status === 'playing' && s.t < 900) {
     actionT -= TICK;
     if (actionT <= 0) {
-      botAct(s);
+      botAct(s, th);
       actionT = 0.35; // human-ish placement pace
     }
     stepGame(s);

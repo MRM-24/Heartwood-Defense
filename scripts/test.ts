@@ -188,5 +188,149 @@ function run(s: ReturnType<typeof createGame>, secs: number, each?: () => void) 
   ok(lanesA === lanesB, 'identical seeds produce identical spawns');
 }
 
+// ── 13. Mite Vaulter: leaps the first wall once, then behaves ──
+{
+  console.log('Mite Vaulter');
+  const s = fresh();
+  placeFlora(s, 'bramble', 1, 6); // a single thin wall
+  const v = spawnEnemy(s, 'vaulter', 1, 8.5);
+  run(s, 5);
+  const wall1 = s.grid[1][6];
+  ok(!!wall1 && wall1.hp === wall1.maxHp, 'leapt over the wall without taking a bite');
+  ok(v.vaulted && v.x < 5.7, 'used its one leap and landed past the wall', `x=${v.x.toFixed(2)}`);
+  placeFlora(s, 'glowbulb', 1, 4); // anything behind the wall holds it now
+  run(s, 4);
+  const plant2 = s.grid[1][4];
+  ok(!!plant2 && plant2.hp < plant2.maxHp, 'a second plant holds it — leap is once per enemy');
+}
+
+// ── 14. Stoneback Grub: slab ignores single-target, only splash wears it ──
+{
+  console.log('Stoneback Grub');
+  const s = fresh();
+  placeFlora(s, 'thornvine', 0, 0);
+  const g = spawnEnemy(s, 'grub', 0, 6);
+  run(s, 3);
+  ok(g.hp === g.maxHp && g.stone === g.maxStone, 'single-target thorns ping off the slab harmlessly');
+  const s2 = fresh();
+  placeFlora(s2, 'cactus', 0, 0);
+  const g2 = spawnEnemy(s2, 'grub', 0, 6);
+  run(s2, 3);
+  ok(g2.stone < g2.maxStone, 'cactus splash wears the slab down');
+  ok(g2.hp === g2.maxHp, 'body untouched while the slab holds');
+  g2.stone = 0; // simulate a cracked slab
+  run(s2, 3);
+  ok(g2.hp < g2.maxHp, 'once cracked, ordinary damage reaches the body');
+  const s3 = fresh();
+  placeFlora(s3, 'frostcap', 0, 0);
+  const g3 = spawnEnemy(s3, 'grub', 0, 6);
+  run(s3, 4);
+  ok(g3.stone < g3.maxStone, 'frostcap spores count as splash vs the slab');
+}
+
+// ── 15. Tunnel Larva: untargetable east of column 6, passes walls there ──
+{
+  console.log('Tunnel Larva');
+  const s = fresh();
+  placeFlora(s, 'thornvine', 0, 7); // wasted placement in the burrow zone
+  placeFlora(s, 'sentinel', 0, 3);  // backline shooter (fires on ground too)
+  placeFlora(s, 'bramble', 0, 4);   // mid-board wall
+  const lv = spawnEnemy(s, 'larva', 0, 8.8);
+  run(s, 3);
+  ok(lv.burrowed, 'burrowed beneath the east columns');
+  ok(lv.hp === lv.maxHp, 'untargetable while underground');
+  run(s, 16);
+  ok(!lv.burrowed && lv.x <= 6.1, 'surfaced at column 6, past the east plants', `x=${lv.x.toFixed(2)}`);
+  ok(!!s.grid[0][7], 'flora in the burrow zone was ignored, not eaten');
+  ok(lv.hp < lv.maxHp, 'shootable once surfaced');
+  const wall = s.grid[0][4];
+  ok(!!wall && wall.hp < wall.maxHp, 'held up by the mid-board wall and chewing it');
+}
+
+// ── 16. Locust Ranger: attacks from 2 tiles out, never closes ──
+{
+  console.log('Locust Ranger');
+  const s = fresh();
+  placeFlora(s, 'bramble', 2, 5);
+  const r = spawnEnemy(s, 'ranger', 2, 8.8);
+  run(s, 5);
+  const wall = s.grid[2][5];
+  ok(!!wall && wall.hp < wall.maxHp, 'snipes the wall from two tiles out');
+  ok(r.x > 6.9, 'never closed to melee range', `x=${r.x.toFixed(2)}`);
+  ok(!r.chewing || wall.hp < wall.maxHp, 'damage comes from spines, not bites');
+}
+
+// ── 17. Spore Imp: catapulted into the back half, stunned on landing ──
+{
+  console.log('Spore Imp');
+  const lvl = mkLevel();
+  lvl.waves = [{ at: 1, groups: [{ type: 'imp' as EnemyKey, count: 3, gap: 1, catapult: true }] }];
+  const plan = createGame(lvl, ALL, 7);
+  ok(
+    plan.pending.length === 3 && plan.pending.every((p) => p.catapult && (p.x ?? 0) >= 1 && (p.x ?? 0) <= 5),
+    'salvo aimed at random back-half tiles (cols 2–5, 1-indexed)',
+  );
+  const s = createGame(lvl, ALL, 7);
+  s.nectar = 1000;
+  run(s, 0.5);
+  ok(s.fx.some((f) => f.kind === 'cata'), 'tile telegraph burns before the shell lands');
+  run(s, 0.9); // t=1.4: first imp down
+  const imp1 = s.enemies.find((e) => e.key === 'imp');
+  ok(!!imp1 && imp1.x <= 5, 'landed behind the front line', `x=${imp1?.x.toFixed(2)}`);
+  ok(!!imp1 && imp1.stunT > 0, 'briefly stunned where it hit');
+  run(s, 3.5);
+  const imps = s.enemies.filter((e) => e.key === 'imp');
+  ok(imps.length === 3, 'whole salvo delivered');
+  ok(imps.every((e) => e.stunT <= 0), 'recovered and prowling after landing');
+}
+
+// ── 18. Gargant Husk: telegraphed one-hit smash, regardless of HP ──
+{
+  console.log('Gargant Husk');
+  const s = fresh();
+  placeFlora(s, 'bramble', 3, 6);
+  placeFlora(s, 'thornvine', 3, 5); // second plant (bramble still recharging)
+  const h = spawnEnemy(s, 'husk', 3, 7.6);
+  run(s, 2.6);
+  ok(h.windup > 0 && h.windup < 1.5, 'wind-up charges visibly before the smash', `w=${h.windup.toFixed(2)}`);
+  ok(!!s.grid[3][6], 'wall still whole during the wind-up');
+  run(s, 2);
+  ok(!s.grid[3][6], '400 HP wall obliterated in one smash — HP never mattered');
+  ok(!!s.grid[3][5], 'wind-up is per plant: next plant gets its own countdown');
+  run(s, 14);
+  ok(!s.grid[3][5], 'second plant smashed too — no amount of HP saves it');
+}
+
+// ── 19. Root Thief: grabs the most wounded flora; kill it to drop, or lose it ──
+{
+  console.log('Root Thief');
+  const s = fresh();
+  placeFlora(s, 'glowbulb', 4, 0);
+  placeFlora(s, 'bramble', 4, 5);
+  s.grid[4][5]!.hp = 30; // the wounded one — bait (no shooters in this lane)
+  const t = spawnEnemy(s, 'thief', 4, 8.6);
+  run(s, 6.2);
+  ok(t.carrying?.key === 'bramble', 'snatched the most wounded flora in the lane, not the bulb');
+  ok(!s.grid[4][5], 'its tile emptied while hauled');
+  ok(t.x > 6.5, 'turned tail and fled east', `x=${t.x.toFixed(2)}`);
+  // bring the hammer down mid-heist
+  placeFlora(s, 'cactus', 4, 2);
+  t.hp = 10;
+  run(s, 2.5);
+  const dropped = s.grid[4][5];
+  ok(!!dropped && dropped.key === 'bramble' && dropped.hp === 30, 'thief killed mid-heist → flora dropped back, unharmed');
+  // escape case: nobody stops it → gone for good
+  const s2 = fresh();
+  placeFlora(s2, 'glowbulb', 1, 0);
+  placeFlora(s2, 'bramble', 1, 4);
+  s2.grid[1][4]!.hp = 25;
+  const t2 = spawnEnemy(s2, 'thief', 1, 8.6);
+  run(s2, 6.2);
+  ok(t2.carrying?.key === 'bramble', 'second thief grabs its prize');
+  run(s2, 4);
+  ok(!s2.enemies.includes(t2), 'escaped off-board with the loot');
+  ok(!s2.grid[1][4], 'the flora is lost permanently');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
