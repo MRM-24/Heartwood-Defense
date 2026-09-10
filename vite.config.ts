@@ -16,4 +16,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"),
     },
   },
+  // allow previewing through proxied hosts (sandboxes, tunnels)
+  server: { allowedHosts: true },
+  preview: { allowedHosts: true },
 });
