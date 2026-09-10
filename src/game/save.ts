@@ -1,3 +1,5 @@
+import { LEVELS } from './data';
+
 const KEY = 'heartwood-defense-save-v1';
 
 export interface SaveData {
@@ -31,7 +33,7 @@ export function recordWin(save: SaveData, levelId: number, snaresLeft: number): 
   const stars = snaresLeft >= 5 ? 3 : snaresLeft >= 3 ? 2 : 1;
   const next: SaveData = {
     ...save,
-    maxLevel: Math.max(save.maxLevel, Math.min(9, levelId + 1)),
+    maxLevel: Math.max(save.maxLevel, Math.min(LEVELS.length - 1, levelId + 1)),
     stars: { ...save.stars, [levelId]: Math.max(save.stars[levelId] ?? 0, stars) },
   };
   persist(next);

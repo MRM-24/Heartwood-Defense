@@ -8,9 +8,10 @@ binary assets**.
 
 ## ✨ Features
 
-- **2 worlds, 10 levels** — *Verdant Vale* teaches the basics; *Frostmire Hollow*
-  throws flying, armored, splitting, and boss enemies at you.
-- **6 Flora, 7 enemies** — each with distinct roles, counters, and attack patterns.
+- **3 worlds, 15 levels** — *Verdant Vale* teaches the basics; *Frostmire Hollow*
+  throws flying, armored, splitting, and boss enemies at you; *Rootbound Depths*
+  debuts **Batch 1**: seven new Blightspawn built to punish lazy strategies.
+- **6 Flora, 14 enemies** — each with distinct roles, counters, and attack patterns.
 - **Loadout system** — pick up to 6 Flora before each level; unlocks grow as you win.
 - **Root Snares** — one emergency snare per lane that roots the first enemy to cross
   it. Finish a level with snares in the ground to earn up to ★★★.
@@ -39,10 +40,22 @@ binary assets**.
 | Creeper Gnat | Baseline blightling. No tricks, just teeth. |
 | Husk Beetle | Slow and dense; tests sustained damage. |
 | Skitter Swarm | Fast, fragile, arrives in threes. |
-| Carapace Warden | Armored shell absorbs 50% of every hit until it shatters. |
+| Carapace Warden | Armored shell absorbs 50% of every hit until it shatters. Wants burst fire. |
 | Spore Drifter | Flies over your walls — immune to ground fire. |
 | Rotback Brute | Splits into two Skitter Swarms on death. |
 | Withered Colossus | Three-phase boss. Faster and hungrier as it dies. |
+| **Mite Vaulter** | Springs over the *first* Flora blocking it — once. Punishes single thin walls. |
+| **Stoneback Grub** | A 150-point stone slab blocks 100% of single-target damage; only splash (Cactus volley, Frostcap spores) cracks it. The mirror of the Carapace Warden — one wants AoE, the other burst. |
+| **Tunnel Larva** | Burrows untouchable under columns 7–9 and surfaces at column 6, ignoring everything planted there. Forces mid-board defense. |
+| **Locust Ranger** | Ranged — halts two tiles out and hurls spines at Flora in reach. Punishes glass cannons with no wall in front. |
+| **Spore Imp** | Catapulted mid-wave into a random back-half tile, behind your wall entirely. 15 HP, but teeth where you have none. |
+| **Gargant Husk** | Doesn't chip damage: a telegraphed 1.5s wind-up, then the Flora it's attacking is destroyed in one hit — regardless of HP. Appears sparingly, late. |
+| **Root Thief** | Never attacks. Every 6s it snatches the most wounded Flora in its lane and hauls it off-board over 3s. Kill it mid-heist and the plant drops back unharmed; let it escape and it's gone for good. |
+
+**Batch 1 design notes** — Stoneback Grub and Carapace Warden pull loadouts in
+opposite directions (splash vs burst). Tunnel Larva, Locust Ranger, and Spore Imp
+all punish "one wall in front, everything stacked behind it." Gargant Husk and
+Root Thief are "answer me now or lose something" spikes beyond raw HP totals.
 
 ## 🎮 Controls
 
@@ -137,7 +150,7 @@ All audio is generated with the Web Audio API at runtime:
 
 ## ⚖️ Balance Tooling
 
-`scripts/sim.ts` bundles a scripted average-skill player and plays all 10 levels
+`scripts/sim.ts` bundles a scripted average-skill player and plays all 15 levels
 headlessly — useful after tuning enemy stats:
 
 ```bash

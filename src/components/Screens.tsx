@@ -109,7 +109,7 @@ export function TitleScreen({ onPlay, onHow, hasSave }: { onPlay: () => void; on
         </div>
         <div className="mt-10 flex items-center gap-2 font-ui text-[12px] font-semibold tracking-wider text-[#62788] text-opacity-70">
           <Shield className="h-4 w-4 text-[#57c178]" />
-          <span className="text-[#6b8571]">10 levels · 2 worlds · 6 Flora · 7 Blightspawn · 2 bosses</span>
+          <span className="text-[#6b8571]">15 levels · 3 worlds · 6 Flora · 14 Blightspawn · 2 bosses</span>
         </div>
       </div>
     </Backdrop>
@@ -142,8 +142,15 @@ export function GuideModal({ onClose }: { onClose: () => void }) {
             If the lane is breached again — <b className="text-[#ff9db1]">the level is lost</b>.
           </Rule>
           <Rule n="4" title="Bring counters">
-            Swarms drown single shooters — answer with pierce. Carapace Wardens drink small hits. Spore Drifters laugh at walls:
-            only the Sunflower Sentinel touches the sky. Check the level intel before every battle.
+            Swarms drown single shooters — answer with pierce. Carapace Wardens drink small hits; Stoneback Grubs ignore them
+            entirely (only splash cracks stone). Spore Drifters laugh at walls: only the Sunflower Sentinel touches the sky.
+            Check the level intel before every battle.
+          </Rule>
+          <Rule n="6" title="The Depths punish habits">
+            In the Rootbound Depths the blight answers how you defend: Mite Vaulters leap a lone wall, Tunnel Larva surface at
+            column 6 behind your front line, Locust Rangers snipe from two tiles out, Spore Imps catapult into your back half,
+            Gargant Husks smash a plant dead after a 1.5s wind-up, and Root Thieves make off with your most wounded Flora.
+            Defense in depth — never one wall and a prayer.
           </Rule>
           <Rule n="5" title="The shovel">
             Digging up a Flora returns <b>nothing</b>. Use it to rebuild a broken lane, not to save money.
@@ -188,7 +195,7 @@ export function WorldSelect({
 }: {
   maxLevel: number;
   stars: Record<number, number>;
-  onPick: (world: 1 | 2) => void;
+  onPick: (world: 1 | 2 | 3) => void;
   onBack: () => void;
 }) {
   return (
@@ -198,7 +205,7 @@ export function WorldSelect({
         <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-2">
           {WORLDS.map((w) => {
             const levels = LEVELS.filter((l) => l.world === w.id);
-            const locked = w.id === 2 && maxLevel < 5;
+            const locked = maxLevel < (w.id - 1) * 5;
             const starCount = levels.reduce((n, l) => n + (stars[l.id] ?? 0), 0);
             return (
               <button
@@ -226,7 +233,7 @@ export function WorldSelect({
                     <span className="ml-2 font-ui text-[12px] font-bold text-[#7f9a85]">{starCount}/15</span>
                   </div>
                   {locked ? (
-                    <span className="flex items-center gap-2 font-ui text-[12px] font-bold text-[#7f9a85]"><Lock className="h-4 w-4" /> CLEAR VERDANT VALE</span>
+                    <span className="flex items-center gap-2 font-ui text-[12px] font-bold text-[#7f9a85]"><Lock className="h-4 w-4" /> CLEAR {WORLDS[w.id - 2].name.toUpperCase()}</span>
                   ) : (
                     <span className="flex items-center gap-1 font-ui text-[13px] font-extrabold text-[#a3f2a0] opacity-70 transition-opacity group-hover:opacity-100">
                       ENTER <ChevronRight className="h-4 w-4" />
@@ -251,7 +258,7 @@ export function LevelSelect({
   onPick,
   onBack,
 }: {
-  world: 1 | 2;
+  world: 1 | 2 | 3;
   maxLevel: number;
   stars: Record<number, number>;
   onPick: (level: LevelDef) => void;
@@ -332,6 +339,8 @@ export function LoadoutScreen({
   const intel = levelEnemyIntel(level);
   const needsAA = intel.includes('drifter');
   const hasAA = picked.includes('sentinel');
+  const needsSplash = intel.includes('grub');
+  const hasSplash = picked.includes('cactus') || picked.includes('frostcap');
   const toggle = (k: FloraKey) => {
     if (picked.includes(k)) setPicked(picked.filter((x) => x !== k));
     else if (picked.length < LOADOUT_SLOTS) setPicked([...picked, k]);
@@ -390,12 +399,19 @@ export function LoadoutScreen({
                 const e = ENEMIES[ek];
                 return (
                   <div key={ek} className="flex items-center gap-3 rounded-xl border border-[#33243a] bg-[#1a121f] p-2.5">
-                    <div className="h-14 w-14 shrink-0" style={{ filter: 'drop-shadow(0 0 6px rgba(207,139,247,.4))' }}><EnemySprite k={ek} shellFrac={e.shell ? 1 : 0}/></div>
+                    <div className="h-14 w-14 shrink-0" style={{ filter: 'drop-shadow(0 0 6px rgba(207,139,247,.4))' }}><EnemySprite k={ek} shellFrac={e.shell ? 1 : 0} stoneFrac={e.stoneShield ? 1 : 0} /></div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 font-ui text-[13px] font-extrabold text-[#ecd7f7]">
+                      <div className="flex flex-wrap items-center gap-1.5 font-ui text-[13px] font-extrabold text-[#ecd7f7]">
                         {e.name}
                         {e.boss && <span className="rounded bg-[#3a1622] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#ff9db1]">BOSS</span>}
                         {e.flying && <span className="rounded bg-[#1d2b3a] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#8fd0f5]">FLYING</span>}
+                        {e.vault && <span className="rounded bg-[#2a2410] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#e4ff9c]">LEAPS</span>}
+                        {e.stoneShield && <span className="rounded bg-[#26251f] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#d8d2c0]">SPLASH ONLY</span>}
+                        {e.burrowEmerge !== undefined && <span className="rounded bg-[#1d2e28] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#9fd8c8]">BURROWS</span>}
+                        {e.ranged && <span className="rounded bg-[#2e2a18] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#ffe07a]">RANGED</span>}
+                        {ek === 'imp' && <span className="rounded bg-[#2e1a2e] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#ff9ad6]">DROPS IN</span>}
+                        {e.smashWindup && <span className="rounded bg-[#2e1c10] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#ffb37a]">ONE-HIT SMASH</span>}
+                        {e.grabEvery && <span className="rounded bg-[#1c2634] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#a8c9ff]">STEALS</span>}
                       </div>
                       <p className="truncate font-ui text-[11px] text-[#9d8fae]">{e.desc}</p>
                       <p className="font-ui text-[11px] font-bold text-[#a3f2a0]">Counter: {e.counter}</p>
@@ -407,6 +423,11 @@ export function LoadoutScreen({
             {needsAA && !hasAA && (
               <div className="mt-3 rounded-xl border border-[#ff5d7c]/60 bg-[#2a0e18] px-3 py-2 font-ui text-[12px] font-bold text-[#ff9db1]">
                 Spore Drifters expected — without the Sunflower Sentinel your lanes are undefended from the sky.
+              </div>
+            )}
+            {needsSplash && !hasSplash && (
+              <div className="mt-3 rounded-xl border border-[#ffb37a]/60 bg-[#2e1c10] px-3 py-2 font-ui text-[12px] font-bold text-[#ffb37a]">
+                Stoneback Grubs expected — their slabs ignore single-target fire. Bring the Spitting Cactus or Frostcap, or bring prayers.
               </div>
             )}
             <div className="mt-3 rounded-xl border border-[#4a7a52]/50 bg-[#101d13] px-3 py-2 font-ui text-[12px] text-[#9db08f]">

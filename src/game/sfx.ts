@@ -94,6 +94,20 @@ export function sfxEvent(name: string) {
     case 'phase': tone(90, 0.7, 'sawtooth', 0.14, 60); noise(0.5, 0.1, 300); break;
     case 'bossadd': tone(155, 0.3, 'square', 0.06, 120); break;
     case 'bossdead': tone(220, 0.8, 'sawtooth', 0.14, 40); noise(0.6, 0.12, 400); break;
+    // ── Batch 1 mechanics ──
+    case 'deflect': tone(1900, 0.05, 'square', 0.035, 1500); break; // ping off a Stoneback slab
+    case 'shieldbreak': tone(700, 0.2, 'square', 0.1, 180); noise(0.16, 0.1, 2600); break;
+    case 'jump': tone(240, 0.18, 'sine', 0.08, 660); break; // mite springs
+    case 'vault': tone(150, 0.07, 'triangle', 0.08, 90); noise(0.06, 0.05, 500); break; // …and lands
+    case 'emerge': tone(120, 0.35, 'sawtooth', 0.1, 70); noise(0.3, 0.09, 350); break;
+    case 'sting': tone(1150, 0.07, 'sawtooth', 0.05, 500); break; // ranger spine loosed
+    case 'grab': tone(500, 0.06, 'square', 0.09, 760); tone(760, 0.07, 'square', 0.08, 1100, 0.05); break;
+    case 'drop': tone(420, 0.1, 'triangle', 0.08, 300); tone(560, 0.12, 'sine', 0.06, undefined, 0.07); break;
+    case 'stolen': [500, 380, 270, 180].forEach((f, i) => tone(f, 0.14, 'triangle', 0.09, undefined, i * 0.09)); break;
+    case 'cata': tone(1500, 1.3, 'sine', 0.07, 320); break; // incoming shell whistle
+    case 'land': tone(95, 0.16, 'sawtooth', 0.13, 45); noise(0.14, 0.1, 420); break;
+    case 'windup': tone(70, 1.1, 'sawtooth', 0.06, 130); break; // husk raises its fists
+    case 'smash': tone(60, 0.4, 'sawtooth', 0.17, 30); noise(0.35, 0.15, 240); break;
     case 'win': [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.25, 'sine', 0.09, undefined, i * 0.12)); break;
     case 'lose': [330, 262, 196, 147].forEach((f, i) => tone(f, 0.3, 'triangle', 0.09, undefined, i * 0.16)); break;
   }

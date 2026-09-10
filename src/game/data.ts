@@ -38,8 +38,8 @@ export const FLORA: Record<FloraKey, FloraStats> = {
     recharge: 8,
     hp: 80,
     role: 'Pierce',
-    desc: 'Spits a spike volley every 1.8s that strikes EVERY enemy in its lane for 15 dmg.',
-    attack: { dmg: 15, interval: 1.8, pierce: true },
+    desc: 'Spits a splash volley every 1.8s that strikes EVERY enemy in its lane for 15 dmg. The only easy answer to Stoneback Grubs.',
+    attack: { dmg: 15, interval: 1.8, pierce: true, aoe: true },
   },
   frostcap: {
     key: 'frostcap',
@@ -48,8 +48,8 @@ export const FLORA: Record<FloraKey, FloraStats> = {
     recharge: 8,
     hp: 60,
     role: 'Control',
-    desc: 'Lobs a chilled spore (12 dmg / 2s) that slows its target by 40% for 3s.',
-    attack: { dmg: 12, interval: 2, slowPct: 0.4, slowDur: 3 },
+    desc: 'Lobs a chilled spore (12 splash dmg / 2s) that slows its target by 40% for 3s. Splash cracks stone; chill buys time.',
+    attack: { dmg: 12, interval: 2, slowPct: 0.4, slowDur: 3, aoe: true },
   },
   sentinel: {
     key: 'sentinel',
@@ -162,6 +162,103 @@ export const ENEMIES: Record<EnemyKey, EnemyStats> = {
     desc: 'The blight given form. Three phases, faster and hungrier as it dies. Calls adds.',
     counter: 'Everything you have. Then more.',
   },
+
+  // ── BATCH 1: THE ROOTBOUND DEPTHS ─────────────────────────────────────────
+  // Each is built to counter a specific plant habit: thin walls, wall-stacking,
+  // cactus spam, glass cannons with no cover, pure front-line defense, and
+  // wounded plants left unattended.
+  vaulter: {
+    key: 'vaulter',
+    name: 'Mite Vaulter',
+    hp: 70,
+    speed: 0.3,
+    dmg: 8,
+    atkInterval: 1.0,
+    spacing: 0.55,
+    scale: 0.95,
+    vault: true,
+    desc: 'Springs clean over the first Flora blocking its path — once — then behaves normally. One thin wall won\u2019t hold it.',
+    counter: 'A second wall behind the first, or shoot it down',
+  },
+  grub: {
+    key: 'grub',
+    name: 'Stoneback Grub',
+    hp: 90,
+    speed: 0.2,
+    dmg: 14,
+    atkInterval: 1.2,
+    spacing: 0.7,
+    scale: 1.1,
+    stoneShield: 150,
+    desc: 'A 150-point stone slab blocks ALL single-target damage. Only splash — Cactus volleys, Frostcap spores — can crack it. The mirror of the Carapace Warden.',
+    counter: 'Splash damage (Spitting Cactus / Frostcap)',
+  },
+  larva: {
+    key: 'larva',
+    name: 'Tunnel Larva',
+    hp: 80,
+    speed: 0.2,
+    dmg: 10,
+    atkInterval: 1.0,
+    spacing: 0.7,
+    scale: 1.0,
+    burrowEmerge: 6,
+    desc: 'Burrows under the first three columns of its lane, untouchable and unblocked, and surfaces at column 6. Walls out east are wasted Nectar.',
+    counter: 'Mid-board and backline defense',
+  },
+  ranger: {
+    key: 'ranger',
+    name: 'Locust Ranger',
+    hp: 65,
+    speed: 0.2,
+    dmg: 9,
+    atkInterval: 1.3,
+    spacing: 0.6,
+    scale: 1.05,
+    ranged: 2,
+    desc: 'Halts two tiles short and hurls thorn spines at the first Flora in reach. Never needs to close in — glass cannons get sniped.',
+    counter: 'A wall to soak its spines',
+  },
+  imp: {
+    key: 'imp',
+    name: 'Spore Imp',
+    hp: 15,
+    speed: 0.36,
+    dmg: 6,
+    atkInterval: 1.0,
+    spacing: 0.45,
+    scale: 0.72,
+    noScale: true,
+    desc: 'Catapulted clean over your line into the back half of a lane. Barely more than a spore with teeth — but teeth behind your wall.',
+    counter: 'A shooter kept in the back half',
+  },
+  husk: {
+    key: 'husk',
+    name: 'Gargant Husk',
+    hp: 400,
+    speed: 0.075,
+    dmg: 0,
+    atkInterval: 1.5,
+    spacing: 0.9,
+    scale: 1.85,
+    smashWindup: 1.5,
+    desc: 'Never chews. After a 1.5s wind-up it obliterates whatever it is attacking in a single smash — regardless of HP. Kill it first.',
+    counter: 'Focus fire before the wind-up lands',
+  },
+  thief: {
+    key: 'thief',
+    name: 'Root Thief',
+    hp: 55,
+    speed: 0.3,
+    dmg: 0,
+    atkInterval: 1.0,
+    spacing: 0.5,
+    scale: 0.95,
+    grabEvery: 6,
+    escapeTime: 3,
+    desc: 'Never bites. Every 6s it snatches the most wounded Flora in its lane and hauls it for the blight — 3s to the edge. Kill it mid-heist and the plant drops back, unharmed.',
+    counter: 'Burst it down before it escapes',
+  },
 };
 
 export const ENEMY_ORDER: EnemyKey[] = [
@@ -172,19 +269,27 @@ export const ENEMY_ORDER: EnemyKey[] = [
   'drifter',
   'brute',
   'colossus',
+  'vaulter',
+  'grub',
+  'larva',
+  'ranger',
+  'imp',
+  'husk',
+  'thief',
 ];
 
 // ─── CAMPAIGN ───────────────────────────────────────────────────────────────
-const G = (type: EnemyKey, count: number, gap = 1.6, startDelay = 0): WaveGroup => ({
+const G = (type: EnemyKey, count: number, gap = 1.6, startDelay = 0, catapult = false): WaveGroup => ({
   type,
   count,
   gap,
   startDelay,
+  catapult,
 });
 const W = (at: number, groups: WaveGroup[]): WaveDef => ({ at, groups });
 
 export interface WorldDef {
-  id: 1 | 2;
+  id: 1 | 2 | 3;
   name: string;
   sub: string;
   hue: string; // accent for UI
@@ -193,6 +298,7 @@ export interface WorldDef {
 export const WORLDS: WorldDef[] = [
   { id: 1, name: 'Verdant Vale', sub: 'Where the first roots woke', hue: '#6ee7a0' },
   { id: 2, name: 'Frostmire Hollow', sub: 'The blight adapts. So must you.', hue: '#7fd4ff' },
+  { id: 3, name: 'Rootbound Depths', sub: 'It has learned how you defend. Time to defend differently.', hue: '#d8a8ff' },
 ];
 
 export const LEVELS: LevelDef[] = [
@@ -325,6 +431,73 @@ export const LEVELS: LevelDef[] = [
       W(156, [G('colossus', 1), G('warden', 1, 0, 14), G('gnat', 2, 1.5, 24)]),
     ],
   },
+  // ── WORLD 3: THE ROOTBOUND DEPTHS ──
+  // Batch 1 enemies debut here. Every level answers a lazy habit: one thin wall,
+  // all-shooters-no-wall, cactus-only splash, front-line-only defense.
+  {
+    id: 10, world: 3, idx: 1, name: 'Over the Wall', hpMul: 1.4,
+    blurb: 'The blight has watched your walls. It brought springs — and shovels.',
+    tip: 'NEW FOES: Mite Vaulters leap a lone wall — double up. Tunnel Larva burrow under columns 7–9 and surface at column 6: hold the mid-board.',
+    addPool: ['gnat', 'vaulter', 'larva'],
+    waves: [
+      W(12, [G('gnat', 2, 2)]),
+      W(52, [G('vaulter', 2, 4)]),
+      W(94, [G('larva', 2, 6), G('gnat', 2, 1.6, 8)]),
+      W(140, [G('vaulter', 3, 3.5), G('larva', 1, 0, 10), G('gnat', 2, 1.5, 4)]),
+      W(186, [G('larva', 2, 7), G('vaulter', 3, 3, 6), G('gnat', 3, 1.4, 12)]),
+    ],
+  },
+  {
+    id: 11, world: 3, idx: 2, name: 'Shell Game', hpMul: 1.45,
+    blurb: 'Stone and shell together. One wants burst. One wants splash. Bring both.',
+    tip: 'NEW FOE: the Stoneback Grub — its slab ignores single-target hits entirely. Cactus volleys and Frostcap spores crack stone; Thornvines finish the body. The Warden wants the opposite.',
+    addPool: ['gnat', 'warden', 'grub'],
+    waves: [
+      W(12, [G('gnat', 2, 2)]),
+      W(52, [G('grub', 1), G('gnat', 2, 1.6, 6)]),
+      W(96, [G('warden', 1), G('grub', 1, 0, 8)]),
+      W(142, [G('grub', 2, 8), G('skitter', 3, 0.7, 6)]),
+      W(188, [G('warden', 2, 8), G('grub', 2, 8, 6), G('gnat', 3, 1.4, 12)]),
+    ],
+  },
+  {
+    id: 12, world: 3, idx: 3, name: 'Sting From Afar', hpMul: 1.5,
+    blurb: 'Spines from two tiles out, and worse raining from the sky.',
+    tip: 'NEW FOES: Locust Rangers snipe from range — give your cannons a wall to hide behind. Spore Imps are catapulted into the BACK half of a lane: keep a shooter in columns 1–5.',
+    addPool: ['gnat', 'ranger', 'imp'],
+    waves: [
+      W(12, [G('gnat', 2, 2)]),
+      W(52, [G('ranger', 2, 4)]),
+      W(94, [G('ranger', 1), G('imp', 2, 3, 6, true)]),
+      W(140, [G('ranger', 2, 5), G('imp', 3, 2.5, 8, true), G('gnat', 2, 1.6, 4)]),
+      W(186, [G('imp', 4, 2.2, 0, true), G('ranger', 3, 4, 5), G('skitter', 3, 0.7, 12)]),
+    ],
+  },
+  {
+    id: 13, world: 3, idx: 4, name: 'The Long Dark', hpMul: 1.55,
+    blurb: 'Something that does not chew. Something that does not fight — only takes.',
+    tip: 'NEW FOES: the Gargant Husk SMASHES a plant dead in one 1.5s wind-up — kill it first, chill it to stall. Root Thieves snatch your most wounded Flora every 6s; kill one mid-heist and the plant drops back unharmed.',
+    addPool: ['gnat', 'husk', 'thief'],
+    waves: [
+      W(12, [G('gnat', 3, 1.6)]),
+      W(54, [G('thief', 1), G('beetle', 1, 0, 6)]),
+      W(98, [G('husk', 1), G('gnat', 3, 1.4, 8)]),
+      W(146, [G('thief', 2, 9), G('husk', 1, 0, 10), G('vaulter', 2, 4, 6)]),
+      W(192, [G('husk', 2, 12), G('thief', 1, 0, 8), G('grub', 1, 0, 14), G('gnat', 3, 1.4, 4)]),
+    ],
+  },
+  {
+    id: 14, world: 3, idx: 5, name: 'Heart of the Rot', hpMul: 1.4, boss: 'colossus',
+    blurb: 'The Colossus again — and this time it has learned every trick you taught it.',
+    tip: 'BOSS: the Depths answer with you — vaulters, grubs, thieves, imps. Defense in depth: splash, burst, walls, AND a backline. Keep your calm and your snares.',
+    addPool: ['gnat', 'vaulter', 'ranger', 'thief'],
+    waves: [
+      W(12, [G('gnat', 2, 2), G('vaulter', 2, 4, 8)]),
+      W(56, [G('grub', 1), G('ranger', 1, 0, 7)]),
+      W(104, [G('thief', 2, 8), G('imp', 3, 2.5, 6, true), G('larva', 1, 0, 12)]),
+      W(158, [G('colossus', 1), G('husk', 1, 0, 16), G('imp', 2, 3, 24, true), G('gnat', 2, 1.5, 30)]),
+    ],
+  },
 ];
 
 // Flora unlocks: level id at which the flora becomes available
@@ -339,6 +512,11 @@ export const FLORA_UNLOCKS: { level: number; flora: FloraKey[] }[] = [
   { level: 7, flora: [] },
   { level: 8, flora: [] },
   { level: 9, flora: [] },
+  { level: 10, flora: [] },
+  { level: 11, flora: [] },
+  { level: 12, flora: [] },
+  { level: 13, flora: [] },
+  { level: 14, flora: [] },
 ];
 
 export function unlockedFloraFor(levelId: number): FloraKey[] {
