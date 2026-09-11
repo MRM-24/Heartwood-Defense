@@ -1,33 +1,237 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   Semantic names for the vale's palette. Components reference these (via
+   `var(--wood-*)`) instead of re-inventing hex values per screen, so a tone
+   can be tuned in one place. Values are lifted from the original art.
+   ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  --ink: #0a140f;
+  /* surfaces */
+  --wood-bg: #070c08;
+  --wood-ink: #0a140f;
+  --wood-panel: #101d13;
+  --wood-panel-2: #0c1710;
+  --wood-panel-3: #0e1a11;
+  --wood-raised: #16281a;
+  /* lines */
+  --wood-line: #3a5a3f;
+  --wood-line-soft: #2c4431;
+  --wood-line-bright: #4a7a52;
+  /* text */
+  --wood-text: #e6f2de;
+  --wood-text-strong: #eaffd9;
+  --wood-text-dim: #9db08f;
+  --wood-text-faint: #7f9a85;
+  /* accents */
+  --wood-gold: #ffd76a;
+  --wood-leaf: #a3f2a0;
+  --wood-leaf-deep: #57c178;
+  --wood-blight: #c38fb8;
+  --wood-danger: #ff5d7c;
+  /* safe areas — 0px on devices that don't report them */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
 html,
 body {
-  background: #070c08;
+  background: var(--wood-bg);
   overscroll-behavior: none;
 }
 
+html {
+  /* Never let iOS resize our fixed-grid game text, never block zoom. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
-  font-family: 'Outfit', system-ui, sans-serif;
-  color: #e6f2de;
+  margin: 0;
+  min-height: 100dvh;
+  font-family: 'Outfit', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--wood-text);
   -webkit-font-smoothing: antialiased;
+  /* A full-screen game must not rubber-band the whole page behind a scroll. */
+  overflow-x: clip;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .font-display {
-  font-family: 'Fraunces', 'Outfit', serif;
+  font-family: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
 }
 .font-ui {
-  font-family: 'Outfit', system-ui, sans-serif;
+  font-family: 'Outfit', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ── interaction basics ──────────────────────────────────────────────────── */
+/* Kill the 300ms double-tap delay on everything tappable. */
+button,
+a,
+[role='button'],
+input,
+select,
+textarea,
+summary {
+  touch-action: manipulation;
+}
+
+/* Visible focus for keyboard players only (skill §1: never remove focus rings). */
+:focus-visible {
+  outline: 2px solid var(--wood-gold);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Press feedback that never shifts layout (transform only). */
+.pressable {
+  transition:
+    transform 0.12s ease-out,
+    filter 0.12s ease-out,
+    box-shadow 0.12s ease-out,
+    border-color 0.12s ease-out,
+    background-color 0.12s ease-out;
+}
+.pressable:active {
+  transform: scale(0.97);
+}
+.pressable:disabled:active,
+.pressable[aria-disabled='true']:active {
+  transform: none;
+}
+
+/* Minimum tap area, expanded beyond the visual box when the art is smaller. */
+.tap-44 {
+  position: relative;
+}
+.tap-44::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
+/* ── safe areas / layout helpers ─────────────────────────────────────────── */
+.safe-pad-x {
+  padding-left: max(1rem, var(--safe-left));
+  padding-right: max(1rem, var(--safe-right));
+}
+.safe-pad-t {
+  padding-top: var(--safe-top);
+}
+.safe-pad-b {
+  padding-bottom: var(--safe-bottom);
+}
+.safe-mx {
+  margin-left: var(--safe-left);
+  margin-right: var(--safe-right);
+}
+
+/* The stages are fixed-pixel canvases that we scale to fit; on touch devices
+   the whole viewport is the "handle", so kill native browser panning inside. */
+.stage-viewport {
+  touch-action: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Thin, dark scrollbars (guides, sheets). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2c4431 transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--wood-panel-2);
+}
+::-webkit-scrollbar-thumb {
+  background: #2c4431;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a5a3f;
 }
 
 ::selection {
   background: rgba(125, 255, 176, 0.25);
 }
 
-/* ── unit idle animations ─────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   UI MOTION — menu-scale transitions (150–300ms, ease-out on enter)
+   ═══════════════════════════════════════════════════════════════════════════ */
+@keyframes sheetup {
+  0% {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.anim-sheetup {
+  animation: sheetup 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes dialogin {
+  0% {
+    transform: scale(0.96) translateY(8px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+.anim-dialogin {
+  animation: dialogin 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes scrimin {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.anim-scrimin {
+  animation: scrimin 0.18s ease-out both;
+}
+
+@keyframes nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+.anim-nudge {
+  animation: nudge 0.3s ease-out;
+}
+
+/* ── unit idle animations ─────────────────────────────────────────────────── */
 @keyframes sway {
   0%, 100% { transform: rotate(-1.6deg); }
   50% { transform: rotate(1.8deg); }
@@ -128,7 +332,7 @@ body {
 .anim-settle { animation: settle 3.8s ease-in-out infinite; }
 .anim-spin-slow { animation: spinSlow 3s linear infinite; transform-box: fill-box; }
 
-/* ── fx / feedback ────────────────────────────────────────────── */
+/* ── fx / feedback ────────────────────────────────────────────────────────── */
 @keyframes drift {
   0% { transform: translate(0, 0); opacity: 0; }
   10% { opacity: 0.8; }
@@ -228,8 +432,35 @@ body {
 }
 .anim-pulse-ring { animation: pulsering 1.8s ease-in-out infinite; }
 
-/* subtle scrollbar for guide */
-::-webkit-scrollbar { width: 10px; }
-::-webkit-scrollbar-track { background: #0c1710; }
-::-webkit-scrollbar-thumb { background: #2c4431; border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: #3a5a3f; }
+/* ═══════════════════════════════════════════════════════════════════════════
+   REDUCED MOTION
+   Anyone who asks the OS for less motion gets a still, readable game: ambient
+   loops stop, longer transitions collapse. (Skill §1 reduced-motion.)
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Decorative ambience is removed outright rather than frozen mid-loop. */
+  .anim-drift,
+  .anim-twinkle,
+  .anim-mist {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INSTALLED-APP MODE
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  /* Nothing overlays the game in a native window — the install offer is
+     driven by React state, this is just a belt-and-braces fallback. */
+  .hide-when-installed {
+    display: none !important;
+  }
+}

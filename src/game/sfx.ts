@@ -69,10 +69,64 @@ function noise(dur: number, vol = 0.15, freq = 1200, delay = 0) {
 
 const THROTTLE = 0.05; // seconds — avoid machine-gun audio
 
-export function sfxEvent(name: string) {
+/**
+ * Playback rate is throttled per sound name so holding a key (or mashing a
+ * button) can't machine-gun the synth.
+ */
+function throttled(name: string, window = THROTTLE) {
   const now = performance.now() / 1000;
-  if (lastPlay[name] && now - lastPlay[name] < THROTTLE) return;
+  if (lastPlay[name] && now - lastPlay[name] < window) return false;
   lastPlay[name] = now;
+  return true;
+}
+
+// ── UI feedback ─────────────────────────────────────────────────────────────
+// Menu sounds are deliberately small: a wooden tick on focus/selection, a
+// two-note confirmation on press, a falling pair on back/dismiss. They sit
+// under the music and never overlap the in-battle mix.
+
+/** Kinds of menu feedback the UI can ask for. */
+export type UiSound = 'tick' | 'confirm' | 'back' | 'open' | 'close' | 'denied' | 'toggle';
+
+export function playUiSound(kind: UiSound) {
+  if (typeof window === 'undefined' || muted) return;
+  switch (kind) {
+    case 'tick':
+      if (!throttled('ui-tick', 0.04)) return;
+      tone(1180, 0.035, 'triangle', 0.045, 900);
+      break;
+    case 'confirm':
+      if (!throttled('ui-confirm', 0.05)) return;
+      tone(560, 0.06, 'triangle', 0.075, 720);
+      tone(880, 0.09, 'triangle', 0.045, 1040, 0.035);
+      break;
+    case 'back':
+      if (!throttled('ui-back', 0.06)) return;
+      tone(520, 0.07, 'triangle', 0.06, 360);
+      tone(300, 0.1, 'triangle', 0.04, 220, 0.045);
+      break;
+    case 'open':
+      if (!throttled('ui-open', 0.06)) return;
+      tone(420, 0.12, 'sine', 0.05, 900);
+      noise(0.1, 0.025, 2600);
+      break;
+    case 'close':
+      if (!throttled('ui-close', 0.06)) return;
+      tone(760, 0.1, 'sine', 0.045, 340);
+      break;
+    case 'denied':
+      if (!throttled('ui-denied', 0.1)) return;
+      tone(180, 0.09, 'square', 0.05, 150);
+      break;
+    case 'toggle':
+      if (!throttled('ui-toggle', 0.05)) return;
+      tone(700, 0.05, 'square', 0.035, 1000);
+      break;
+  }
+}
+
+export function sfxEvent(name: string) {
+  if (!throttled(name)) return;
   switch (name) {
     case 'shoot': tone(760, 0.07, 'square', 0.06, 420); break;
     case 'spike': tone(520, 0.06, 'square', 0.06, 260); noise(0.04, 0.05, 2400); break;

@@ -4,6 +4,8 @@ import App from '../src/App';
 import Board from '../src/components/Board';
 import Hud from '../src/components/Hud';
 import { CodexEntry, ConfirmDialog, GuideModal, LevelSelect, LoadoutScreen, LoseOverlay, PauseOverlay, TitleScreen, WinOverlay, WorldSelect } from '../src/components/Screens';
+import InstallPrompt from '../src/components/InstallPrompt';
+import type { InstallState } from '../src/game/pwa';
 import { createGame, placeFlora, spawnEnemy, stepGame } from '../src/game/engine';
 import { ENEMY_ORDER, FLORA_ORDER, LEVELS, defaultLoadoutFor } from '../src/game/data';
 import { codexEnemies, codexFlora, levelsCleared, totalStars, type SaveData } from '../src/game/save';
@@ -257,6 +259,110 @@ check('Board(full combat)', () => renderToString(<Board s={s} alpha={0.5} onCell
     return chitters;
   });
 }
+// ── installable-app surfaces ────────────────────────────────────────────────
+const installStub: InstallState = {
+  canPrompt: true,
+  promptInstall: async () => 'accepted' as const,
+  iosManual: false,
+  installed: false,
+  pref: 'unset',
+  offering: true,
+  accept: () => {},
+  decline: () => {},
+  later: () => {},
+};
+check('InstallPrompt(android)', () =>
+  assert('install', renderToString(<InstallPrompt install={installStub} onClose={() => {}} />), [
+    'Install the app',
+    'INSTALL APP',
+    'NOT NOW',
+    'DON’T ASK AGAIN',
+    'Works offline',
+  ]),
+);
+check('InstallPrompt(ios walkthrough)', () =>
+  assert(
+    'install-ios',
+    renderToString(<InstallPrompt install={{ ...installStub, canPrompt: false, iosManual: true }} onClose={() => {}} />),
+    ['Add to Home Screen', 'ON IPHONE / IPAD', 'GOT IT'],
+  ),
+);
+check('TitleScreen(install + key hints)', () =>
+  assert(
+    'title-install',
+    renderToString(
+      <TitleScreen
+        hasSave={false} resume="World 1-1 · First Bloom" stars={0} cleared={0}
+        floraKnown={3} floraTotal={FLORA_ORDER.length} enemiesKnown={3} enemiesTotal={ENEMY_ORDER.length}
+        muted={false} onContinue={() => {}} onNewGame={() => {}} onLevels={() => {}} onGuide={() => {}}
+        onToggleMute={() => {}} onInstall={() => {}} canInstall installed={false} showKeyHints
+      />,
+    ),
+    ['INSTALL', 'ESC', 'ENTER', 'back / pause'],
+  ),
+);
+check('TitleScreen(installed — no install button)', () => {
+  const html = renderToString(
+    <TitleScreen
+      hasSave resume="World 1-1 · First Bloom" stars={3} cleared={1}
+      floraKnown={3} floraTotal={FLORA_ORDER.length} enemiesKnown={3} enemiesTotal={ENEMY_ORDER.length}
+      muted={false} onContinue={() => {}} onNewGame={() => {}} onLevels={() => {}} onGuide={() => {}}
+      onToggleMute={() => {}} onInstall={() => {}} canInstall installed
+    />,
+  );
+  if (html.includes('aria-label="Install Heartwood Defense as an app"')) throw new Error('install button shown while installed');
+  return html;
+});
+check('Hud(compact — phone layout)', () =>
+  assert(
+    'hud-compact',
+    renderToString(
+      <Hud s={s} speed={1} muted={false} compact interactive onSelect={() => {}} onShovel={() => {}} onSpeed={() => {}} onPause={() => {}} onMute={() => {}} />,
+    ),
+    ['SEED TRAY', 'READY', 'DIG UP'],
+  ),
+);
+check('Hud(compact top strip)', () =>
+  assert(
+    'hud-compact-top',
+    renderToString(
+      <Hud s={s} speed={2} muted compact part="top" interactive onSelect={() => {}} onShovel={() => {}} onSpeed={() => {}} onPause={() => {}} onMute={() => {}} />,
+    ),
+    ['Game speed, currently 2 times', 'PAUSE', 'nectar', 'Wave progress'],
+  ),
+);
+check('Hud(compact — placement hint)', () => {
+  const selected = s.selected;
+  s.selected = 'thornvine';
+  try {
+    return assert(
+      'hud-hint',
+      renderToString(
+        <Hud s={s} speed={1} muted={false} compact interactive onSelect={() => {}} onShovel={() => {}} onSpeed={() => {}} onPause={() => {}} onMute={() => {}} />,
+      ),
+      ['TAP A TILE TO PLANT THORNVINE'],
+    );
+  } finally {
+    s.selected = selected;
+  }
+}),
+check('Hud(compact — shovel hint)', () => {
+  const prev = s.selected;
+  s.selected = null;
+  s.shovelArmed = true;
+  try {
+    return assert(
+      'hud-shovel',
+      renderToString(
+        <Hud s={s} speed={1} muted={false} compact interactive onSelect={() => {}} onShovel={() => {}} onSpeed={() => {}} onPause={() => {}} onMute={() => {}} />,
+      ),
+      ['TAP A FLORA TO DIG IT UP'],
+    );
+  } finally {
+    s.shovelArmed = false;
+    s.selected = prev;
+  }
+});
 check('Hud(boss, cd, tray)', () =>
   renderToString(
     <Hud s={s} speed={2} muted={false} onSelect={() => {}} onShovel={() => {}} onSpeed={() => {}} onPause={() => {}} onMute={() => {}} />,

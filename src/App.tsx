@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import GameScreen from './components/GameScreen';
+import InstallPrompt from './components/InstallPrompt';
 import { ConfirmDialog, GuideModal, LevelSelect, LoadoutScreen, TitleScreen, WorldSelect } from './components/Screens';
 import { ENEMY_ORDER, FLORA_ORDER, LEVELS, defaultLoadoutFor } from './game/data';
 import { setBgmMuted, startBgm } from './game/bgm';
+import { isTouchDevice, useInstall } from './game/pwa';
 import {
   codexEnemies,
   codexFlora,
@@ -31,7 +33,9 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'title' });
   const [showGuide, setShowGuide] = useState(false);
   const [confirmNew, setConfirmNew] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
   const [picked, setPicked] = useState<FloraKey[]>([]);
+  const install = useInstall();
 
   useEffect(() => {
     setSfxMuted(save.muted);
@@ -49,6 +53,11 @@ export default function App() {
       window.removeEventListener('keydown', boot);
     };
   }, []);
+
+  // First visit only: offer to install, unless the player already answered.
+  useEffect(() => {
+    if (install.offering) setShowInstall(true);
+  }, [install.offering]);
 
   // What the Field Guide is allowed to show in full; everything else is a silhouette.
   const guideFlora = useMemo(() => codexFlora(save), [save]);
@@ -101,6 +110,15 @@ export default function App() {
     setSave((sv) => persistMuted(sv, !sv.muted));
   }, []);
 
+  const goTitle = useCallback(() => setScreen({ name: 'title' }), []);
+  const goWorlds = useCallback(() => setScreen({ name: 'worlds' }), []);
+
+  const openInstall = useCallback(() => setShowInstall(true), []);
+
+  const installDialog = showInstall && (
+    <InstallPrompt install={install} onClose={() => setShowInstall(false)} />
+  );
+
   switch (screen.name) {
     case 'title':
       return (
@@ -117,9 +135,13 @@ export default function App() {
             muted={save.muted}
             onContinue={continueGame}
             onNewGame={requestNewGame}
-            onLevels={() => setScreen({ name: 'worlds' })}
+            onLevels={goWorlds}
             onGuide={() => setShowGuide(true)}
             onToggleMute={toggleMute}
+            onInstall={openInstall}
+            canInstall={install.canPrompt || install.iosManual}
+            installed={install.installed}
+            showKeyHints={!isTouchDevice()}
           />
           {showGuide && (
             <GuideModal unlockedFlora={guideFlora} unlockedEnemies={guideEnemies} onClose={() => setShowGuide(false)} />
@@ -129,9 +151,9 @@ export default function App() {
               title="Start Over?"
               body={
                 <>
-                  This clears your campaign: stars reset and the vale closes back up to
-                  World 1-1. Your <b className="text-[#a3f2a0]">Field Guide</b> entries stay
-                  recorded, so nothing you have already catalogued goes dark again.
+                  This clears your campaign: stars reset and the vale closes back up to World 1-1. Your{' '}
+                  <b className="text-[#a3f2a0]">Field Guide</b> entries stay recorded, so nothing you have already
+                  catalogued goes dark again.
                 </>
               }
               confirmLabel="START OVER"
@@ -139,6 +161,7 @@ export default function App() {
               onCancel={() => setConfirmNew(false)}
             />
           )}
+          {installDialog}
         </>
       );
     case 'worlds':
@@ -147,7 +170,7 @@ export default function App() {
           maxLevel={save.maxLevel}
           stars={save.stars}
           onPick={(world) => setScreen({ name: 'levels', world })}
-          onBack={() => setScreen({ name: 'title' })}
+          onBack={goTitle}
         />
       );
     case 'levels':
@@ -157,7 +180,7 @@ export default function App() {
           maxLevel={save.maxLevel}
           stars={save.stars}
           onPick={openLoadout}
-          onBack={() => setScreen({ name: 'worlds' })}
+          onBack={goWorlds}
           guideFlora={guideFlora}
           guideEnemies={guideEnemies}
         />
