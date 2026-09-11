@@ -119,20 +119,17 @@ summary {
   transform: translate(-50%, -50%);
 }
 
-/* ── safe areas / layout helpers ─────────────────────────────────────────── */
+/* ── safe areas / layout helpers ───────────────────────────────────────────
+   CAREFUL: these are unlayered, so they WIN over every Tailwind utility
+   (utilities live in @layer utilities, and unlayered CSS beats layered CSS).
+   Never pair one with a Tailwind class that sets the same property —
+   `safe-mx` + `mx-auto` silently killed the menus' centring that way, and
+   `safe-pad-t` + `py-8` ate the top padding. Safe-area spacing that must
+   combine with other values belongs in the markup as
+   `pt-[max(1rem,var(--safe-top))]`-style arbitrary values instead. */
 .safe-pad-x {
   padding-left: max(1rem, var(--safe-left));
   padding-right: max(1rem, var(--safe-right));
-}
-.safe-pad-t {
-  padding-top: var(--safe-top);
-}
-.safe-pad-b {
-  padding-bottom: var(--safe-bottom);
-}
-.safe-mx {
-  margin-left: var(--safe-left);
-  margin-right: var(--safe-right);
 }
 
 /* The stages are fixed-pixel canvases that we scale to fit; on touch devices

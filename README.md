@@ -33,10 +33,13 @@ binary assets**.
 - **Installable PWA** — a manifest, generated icons, an offline service worker
   and a first-visit install offer that remembers your answer. Installed, it runs
   full-screen with no browser chrome and no network.
-- **Built for phones** — a mobile-first layout (status bar → board → seed tray in
-  the thumb zone), 44px+ touch targets, safe-area padding for notches and home
-  indicators, haptics on plant/reject, screen-wake lock during a battle, and no
-  page zoom/scroll fighting the grid.
+- **Built for phones** — a mobile-first layout that follows how you hold it:
+  portrait stacks status bar → board → seed tray in the thumb zone, landscape
+  moves the tray to a side rail so the field keeps the full (scarce) height.
+  44px+ touch targets, safe-area padding for notches and home indicators,
+  haptics on plant/reject, screen-wake lock during a battle, and no page
+  zoom/scroll fighting the grid. On desktop the whole stage (HUD + field)
+  scales as one framed unit that always fits the window.
 - **A real main menu** — *Continue* drops you into the first level you have not
   cleared, *New Game* wipes the campaign behind a confirmation, *Level Select*
   opens the world map, and the sound toggle lives right on the title screen.
@@ -310,7 +313,7 @@ src/
 ├── components/
 │   ├── Board.tsx        # battle grid, enemies, projectiles, FX rendering
 │   ├── GameScreen.tsx   # fixed-tick game loop, input, scaling, overlays, wake lock
-│   ├── Hud.tsx          # nectar counter, flora tray, boss bar, controls (roomy + compact)
+│   ├── Hud.tsx          # nectar counter, flora tray, boss bar, controls (roomy + stacked + landscape rail)
 │   ├── InstallPrompt.tsx# first-visit install offer (native prompt or iOS walkthrough)
 │   ├── Screens.tsx      # title menu, world/level select, loadout, Field Guide + entry pages, end screens
 │   ├── ui.tsx           # buttons, icon buttons, bottom-sheet/dialog shell, focus trap

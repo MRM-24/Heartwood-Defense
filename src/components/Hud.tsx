@@ -10,11 +10,17 @@ interface Props {
   /** Phone/tablet arrangement: trays in the thumb zone, controls in a top bar. */
   compact?: boolean;
   /**
-   * Compact layout is rendered in two pieces so the game screen can centre the
-   * board between them: `top` is the status strip, `tray` is the seed row.
-   * Omit for the combined layout.
+   * Compact layout is rendered in pieces so the game screen can place the
+   * board between/around them: `top` is the status strip, `tray` is the
+   * portrait seed row, `rail` is the landscape side column. Omit `part` for
+   * the combined desktop layout.
    */
-  part?: 'top' | 'tray';
+  part?: 'top' | 'tray' | 'rail';
+  /**
+   * Landscape phone arrangement: the top strip drops the boss banner (the
+   * game screen overlays it on the field so it never eats board height).
+   */
+  landscape?: boolean;
   /** False while paused or after the level ends. */
   interactive?: boolean;
   onSelect: (k: FloraKey) => void;
@@ -120,12 +126,18 @@ function TrayButton({
   k,
   i,
   disabled,
+  desktop,
   onSelect,
 }: {
   s: GameState;
   k: FloraKey;
   i: number;
   disabled?: boolean;
+  /**
+   * Desktop stage: the whole HUD shares the board's fixed 1080px frame, so
+   * these buttons are pinned to a size that keeps six + the shovel inside it.
+   */
+  desktop?: boolean;
   onSelect: (k: FloraKey) => void;
 }) {
   const def = FLORA[k];
@@ -143,7 +155,9 @@ function TrayButton({
         cd > 0 ? `, recharging ${Math.ceil(cd)} seconds` : afford ? '' : ', not enough nectar'
       }`}
       title={`${def.name} — ${def.role}\n${def.desc}\nHotkey: ${i + 1}`}
-      className={`pressable group relative h-[76px] w-[74px] shrink-0 overflow-hidden rounded-xl border sm:h-[88px] sm:w-[92px] ${
+      className={`pressable group relative shrink-0 overflow-hidden rounded-xl border ${
+        desktop ? 'h-[84px] w-[80px]' : 'h-[76px] w-[74px] sm:h-[88px] sm:w-[92px]'
+      } ${
         selected
           ? 'border-[#ffd76a] shadow-[0_0_16px_rgba(255,215,106,.4)]'
           : usable
@@ -181,7 +195,18 @@ function TrayButton({
   );
 }
 
-function ShovelButton({ s, onShovel, disabled }: { s: GameState; onShovel: () => void; disabled?: boolean }) {
+function ShovelButton({
+  s,
+  onShovel,
+  disabled,
+  desktop,
+}: {
+  s: GameState;
+  onShovel: () => void;
+  disabled?: boolean;
+  /** Pinned narrow so the desktop HUD row fits the 1080px stage frame. */
+  desktop?: boolean;
+}) {
   return (
     <button
       type="button"
@@ -190,7 +215,9 @@ function ShovelButton({ s, onShovel, disabled }: { s: GameState; onShovel: () =>
       aria-pressed={s.shovelArmed}
       aria-label="Shovel: remove a Flora, no refund"
       title="Shovel — remove a Flora (no refund). Hotkey: X"
-      className={`pressable relative flex h-[76px] w-[62px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border sm:h-[88px] sm:w-[72px] ${
+      className={`pressable relative flex shrink-0 flex-col items-center justify-center gap-1 rounded-xl border ${
+        desktop ? 'h-[84px] w-[64px]' : 'h-[76px] w-[62px] sm:h-[88px] sm:w-[72px]'
+      } ${
         s.shovelArmed
           ? 'border-[#ffb37a] bg-[#33231a] shadow-[0_0_14px_rgba(255,179,122,.4)]'
           : 'border-[#2c4431] bg-[#16281a] hover:border-[#a8794a]'
@@ -261,7 +288,7 @@ function ControlCluster({
 }
 
 /** Boss health / phase / ward banner. */
-function BossBar({ s }: { s: GameState }) {
+export function BossBar({ s }: { s: GameState }) {
   const boss = s.enemies.find((e) => ENEMIES[e.key].boss);
   if (!boss) return null;
   return (
@@ -310,6 +337,7 @@ export default function Hud({
   muted,
   compact = false,
   part,
+  landscape = false,
   interactive = true,
   onSelect,
   onShovel,
@@ -337,11 +365,29 @@ export default function Hud({
               onMute={onMute}
             />
           </div>
-          {boss && (
+          {boss && !landscape && (
             <div className="flex justify-center">
               <BossBar s={s} />
             </div>
           )}
+        </div>
+      );
+    }
+    if (part === 'rail') {
+      // Landscape: a vertical, scrollable tray beside the board. Buttons keep
+      // their real (unscaled) 74–92px size, so touch targets stay ≥44pt.
+      const ready = s.loadout.filter((k) => (s.trayCd[k] ?? 0) <= 0 && s.nectar >= FLORA[k].cost).length;
+      return (
+        <div className="flex h-full min-h-0 flex-col gap-1.5">
+          <span className="text-center font-ui text-[10px] font-bold tracking-widest text-[#4d6a55] tabular-nums">
+            {ready}/{s.loadout.length} READY
+          </span>
+          <div className="no-scrollbar flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto overscroll-contain pb-1">
+            {s.loadout.map((k, i) => (
+              <TrayButton key={k} s={s} k={k} i={i} disabled={!interactive} onSelect={onSelect} />
+            ))}
+            <ShovelButton s={s} onShovel={onShovel} disabled={!interactive} />
+          </div>
         </div>
       );
     }
@@ -376,9 +422,9 @@ export default function Hud({
       <NectarPanel s={s} />
       <div className="flex flex-1 items-center gap-2 rounded-2xl border border-[#3a5a3f] bg-[#101d13]/90 px-3 py-2 shadow-[0_4px_20px_rgba(0,0,0,.4)]">
         {s.loadout.map((k, i) => (
-          <TrayButton key={k} s={s} k={k} i={i} disabled={!interactive} onSelect={onSelect} />
+          <TrayButton key={k} s={s} k={k} i={i} disabled={!interactive} desktop onSelect={onSelect} />
         ))}
-        <ShovelButton s={s} onShovel={onShovel} disabled={!interactive} />
+        <ShovelButton s={s} onShovel={onShovel} disabled={!interactive} desktop />
       </div>
       <div className="flex min-w-[236px] flex-col gap-2">
         <div className="flex flex-1 items-center">

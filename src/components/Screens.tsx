@@ -205,7 +205,7 @@ export function TitleScreen({
 
   return (
     <Backdrop>
-      <div className="safe-mx safe-pad-x safe-pad-t relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col items-center justify-center py-8 pb-[max(2rem,var(--safe-bottom))]">
+      <div className="safe-pad-x relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col items-center justify-center pt-[max(2rem,var(--safe-top))] pb-[max(2rem,var(--safe-bottom))]">
         {/* top controls — install + sound */}
         <div
           className="absolute right-0 top-0 z-20 flex items-center gap-2"
@@ -866,7 +866,7 @@ export function WorldSelect({
   useBackHandler(onBack);
   return (
     <Backdrop>
-      <div className="safe-mx safe-pad-x mx-auto flex min-h-dvh w-full max-w-5xl flex-col items-center justify-center py-6 pb-[max(1.5rem,var(--safe-bottom))]">
+      <div className="safe-pad-x mx-auto flex min-h-dvh w-full max-w-5xl flex-col items-center justify-center pt-[max(1.5rem,var(--safe-top))] pb-[max(1.5rem,var(--safe-bottom))]">
         <Header kicker="CHOOSE YOUR GROUND" title="Five Worlds of the Vale" />
         <div ref={gridRef} className="grid w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 md:gap-6">
           {WORLDS.map((w) => {
@@ -956,7 +956,7 @@ export function LevelSelect({
 
   return (
     <Backdrop>
-      <div className="safe-mx safe-pad-x mx-auto flex min-h-dvh w-full max-w-4xl flex-col items-center justify-center py-6 pb-[max(1.5rem,var(--safe-bottom))]">
+      <div className="safe-pad-x mx-auto flex min-h-dvh w-full max-w-4xl flex-col items-center justify-center pt-[max(1.5rem,var(--safe-top))] pb-[max(1.5rem,var(--safe-bottom))]">
         <Header
           kicker={`WORLD ${world} — ${w.name.toUpperCase()}`}
           title={w.id === 1 ? 'Hold the Vale' : w.id === 5 ? 'Answer What You Taught' : 'Break the Hollow'}
@@ -1156,7 +1156,7 @@ export function LoadoutScreen({
 
   return (
     <Backdrop>
-      <div className="safe-mx safe-pad-x mx-auto flex min-h-dvh w-full max-w-6xl flex-col py-5 pb-[max(7.5rem,calc(var(--safe-bottom)+7rem))] lg:pb-8">
+      <div className="safe-pad-x mx-auto flex min-h-dvh w-full max-w-6xl flex-col pt-[max(1.25rem,var(--safe-top))] pb-[max(7.5rem,calc(var(--safe-bottom)+7rem))] lg:pb-[max(2rem,var(--safe-bottom))]">
         <Header kicker={`WORLD ${level.world}-${level.idx} · ${level.name.toUpperCase()}`} title="Choose Your Flora" />
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_380px] lg:gap-6">
           {/* flora library */}

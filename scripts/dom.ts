@@ -28,8 +28,11 @@ function define(name: string, value: unknown) {
 
 /** Flip this to make the app believe it is on a phone (max-width breakpoints). */
 let compactViewport = false;
+/** Flip this to make the app believe it is a phone held in landscape. */
+let landscapeViewport = false;
 const noopMql = (query: string) => ({
   get matches() {
+    if (landscapeViewport && /orientation: landscape/.test(query)) return true;
     return compactViewport && /max-width/.test(query);
   },
   media: query,
@@ -347,6 +350,94 @@ async function main() {
   check('…world select closed without leaving the app', () => {
     assert(text().includes('BEGIN THE VIGIL'), 'system back did not return to the title');
   });
+
+  // ── the battle screen at desktop width ────────────────────────────────────
+  check('desktop layout: into a battle', () => {
+    click(byLabel('Level select'), 'LEVEL SELECT');
+    click(byLabel('World 1'), 'WORLD 1');
+    click(byLabel('First Bloom') ?? byLabel('1-1'), 'level 1-1');
+    click(byLabel('TO BATTLE'), 'TO BATTLE');
+    assert(text().includes('PAUSE'), 'desktop HUD did not render');
+  });
+
+  check('desktop layout: the stage is scaled exactly once', () => {
+    // Regression: the board used to carry its own scale() transform *and* sit
+    // inside the stage wrapper's scale() — the field rendered at scale² and
+    // overflowed fullscreen viewports.
+    const transforms = window.document.querySelectorAll('[style*="scale("]');
+    assert(transforms.length === 1, `expected exactly 1 stage transform, found ${transforms.length}`);
+    const board = window.document.querySelector('.stage-viewport');
+    assert(board, 'board wrapper missing');
+    assert(!board!.getAttribute('style'), 'the board wrapper must not scale itself in the desktop stage');
+  });
+
+  check('desktop layout: Escape pauses', () => key('Escape'));
+  await tick(60);
+  check('…pause overlay', () => {
+    assert(text().includes('The Vale Waits'), 'Escape did not pause the desktop battle');
+  });
+  click(byLabel('Abandon'), 'ABANDON');
+  await tick(60);
+  check('…back on the level list', () => {
+    assert(text().includes('Hold the Vale'), 'ABANDON did not return to the level list');
+    key('Escape');
+  });
+  await tick();
+  check('…world select', () => {
+    assert(text().includes('Five Worlds of the Vale'), 'Escape did not leave the level list');
+    key('Escape');
+  });
+  await tick(80);
+  check('…back on the title', () => {
+    assert(text().includes('BEGIN THE VIGIL'), 'did not return to the title');
+  });
+
+  // ── the battle screen on a phone held in landscape ────────────────────────
+  landscapeViewport = true;
+
+  check('landscape layout: into a battle', () => {
+    click(byLabel('Level select'), 'LEVEL SELECT');
+    click(byLabel('World 1'), 'WORLD 1');
+    click(byLabel('First Bloom') ?? byLabel('1-1'), 'level 1-1');
+    click(byLabel('TO BATTLE'), 'TO BATTLE');
+    assert(text().includes('READY'), 'landscape seed rail did not render');
+    assert(text().includes('DIG UP'), 'shovel missing from the landscape rail');
+  });
+
+  check('landscape layout: the board scales itself, exactly once', () => {
+    // Phones scale the board alone (the HUD stays unscaled around it): the
+    // wrapper sizes itself and its inner div carries the one and only
+    // transform in the tree.
+    const board = window.document.querySelector('.stage-viewport');
+    assert(board, 'board wrapper missing');
+    assert((board!.getAttribute('style') ?? '').includes('width'), 'the landscape board must size itself');
+    assert((board!.firstElementChild?.getAttribute('style') ?? '').includes('scale('), 'the landscape board must carry its own scale');
+    const transforms = window.document.querySelectorAll('[style*="scale("]');
+    assert(transforms.length === 1, `expected exactly 1 board transform, found ${transforms.length}`);
+  });
+
+  check('landscape layout: Escape pauses', () => key('Escape'));
+  await tick(60);
+  check('…pause overlay', () => {
+    assert(text().includes('The Vale Waits'), 'Escape did not pause the landscape battle');
+  });
+  click(byLabel('Abandon'), 'ABANDON');
+  await tick(60);
+  check('…back on the level list', () => {
+    assert(text().includes('Hold the Vale'), 'ABANDON did not return to the level list');
+    key('Escape');
+  });
+  await tick();
+  check('…world select', () => {
+    assert(text().includes('Five Worlds of the Vale'), 'Escape did not leave the level list');
+    key('Escape');
+  });
+  await tick(80);
+  check('…back on the title', () => {
+    assert(text().includes('BEGIN THE VIGIL'), 'did not return to the title');
+  });
+
+  landscapeViewport = false;
 
   // ── the actual battle screen, on a simulated phone ────────────────────────
   compactViewport = true;

@@ -229,7 +229,7 @@ export function SheetHandle() {
 export function ModalBody({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,var(--safe-bottom))] sm:px-7 sm:pb-6 ${className}`}
+      className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,var(--safe-bottom))] sm:px-7 sm:pb-[max(1.5rem,var(--safe-bottom))] ${className}`}
     >
       {children}
     </div>
