@@ -5,12 +5,12 @@ import { LEVELS, defaultLoadoutFor } from './game/data';
 import { setBgmMuted, startBgm } from './game/bgm';
 import { loadSave, recordWin, setMuted as persistMuted, type SaveData } from './game/save';
 import { setSfxMuted } from './game/sfx';
-import type { FloraKey, LevelDef } from './game/types';
+import type { FloraKey, LevelDef, WorldId } from './game/types';
 
 type Screen =
   | { name: 'title' }
   | { name: 'worlds' }
-  | { name: 'levels'; world: 1 | 2 | 3 | 4 }
+  | { name: 'levels'; world: WorldId }
   | { name: 'loadout'; level: LevelDef }
   | { name: 'game'; level: LevelDef };
 

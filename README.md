@@ -8,13 +8,15 @@ binary assets**.
 
 ## ✨ Features
 
-- **4 worlds, 20 levels** — *Verdant Vale* teaches the basics; *Frostmire Hollow*
+- **5 worlds, 25 levels** — *Verdant Vale* teaches the basics; *Frostmire Hollow*
   throws flying, armored, splitting, and boss enemies at you; *Rootbound Depths*
   debuts **Batch 1**: seven new Blightspawn built to punish lazy strategies — and
   seven new Flora built to answer them; *The Hollow Crown* debuts **Batch 2**: seven
   more Blightspawn built to punish the *counters* Batch 1 taught you to reach for —
-  and **Flora Batch 2** answers those in turn, without using a single status effect.
-- **20 Flora, 21 Blightspawn, 3 bosses** — each with distinct roles, counters, and attack patterns.
+  and **Flora Batch 2** answers those in turn, without using a single status effect;
+  *The Hollow Reckoning* debuts **Batch 3**: six Blightspawn with no new Flora at
+  all, each one engineered to spend *your Batch-2 favorites* on nothing.
+- **20 Flora, 27 Blightspawn, 3 bosses** — each with distinct roles, counters, and attack patterns.
 - **Loadout system** — pick up to 6 Flora before each level; unlocks grow as you win.
 - **Root Snares** — one emergency snare per lane that roots the first enemy to cross
   it. Finish a level with snares in the ground to earn up to ★★★.
@@ -76,6 +78,12 @@ binary assets**.
 | **Barkskin Marauder** | 180 HP, 18 dmg/1.4s. **Immune to root and immobilise** — a Bindweed Snare lashes it and falls away. It cannot be time-stalled, only damaged down. |
 | **Grovemaw Slug** | 200 HP, never bites. Any **slow or poison** that lands on it is swallowed instead, and its total value (`pct × seconds`) becomes **25% damage reduction per point**, capped at 85%, for the effect's duration. Frostcap chills are its dinner. |
 | **The Hollow King** | 3500 HP world boss. Sheds Molt Wisps across the whole board; below ⅔ HP it **shuts one damage channel off** for 5s at a time, alternating between single-target strikes and splash; below ¼ HP it **enrages** — twice the swing rate, twice the damage taken. |
+| **Regrowth Husk** | 100 HP. Knits **15 HP back every 2s it goes unhit** — the clock resets on *any* hit. Ironbark's 3s swing gap is exactly its dinner bell; a Thornvine or Emberlash stream never gives it a beat. |
+| **Cinder Golem** | 140 HP, slow. **Half damage from every burn source** — Emberlash beams simmer, Prism fire bursts hit soft. Cinderpod splash and Ironbark swings are concussion, not fire, and go in whole. |
+| **Bulwark Roach** | 110 HP. Any **single hit below 10 damage floors to 1** — a whole Needle Reed volley chips it for five. One 18-damage Thornvine bite out-damages the entire spray. Beams are streams, not volleys, and keep full value. |
+| **Boulder Toad** | 160 HP. **Immune to every displacement** — Gale Fern gusts wash off granite without breaking stride. There is nothing to shove it with; grind it down. |
+| **Iron Nightstalker** | 130 HP. The Nightcap's dash — past your front two plants, one burst into the back row — but each sprint starts with **an iron plate that eats the first hit**, Sentinel Bloom's riposte included. Then it bounds east, re-arms, and comes again. |
+| **Wardshell Grub** | 100 HP. **The first hit after entering any new tile deals zero** — once per tile. An Ambush Fern springs on nothing every step it takes; any second hit, or any cheap needle, spends it. |
 
 **Batch 2 design notes** — Batch 1 taught a set of reflexes; Batch 2 punishes the
 reflexes rather than the laziness. **Grovemaw Slug** and **Barkskin Marauder** are
@@ -89,6 +97,19 @@ than free safety for Watchvine / Nectar Lotus / Glowbulb. **Molt Wisp** quietly
 taxes one-shot splash: every big hit that crosses the threshold buys the blight two
 bodies instead of one. **The Hollow King** is the loadout check — a tray that only
 does one kind of damage stalls for five seconds at a time.
+
+**Enemy Batch 3 design notes** — the Reckoning has no new plants, and that is the
+point. Batch 2 handed you seven favorite tricks; each Batch-3 enemy spends exactly
+one of them on nothing: the **Regrowth Husk** turns Ironbark's burst cadence into a
+healing rhythm (only sustained streams deny it), the **Cinder Golem** halves the
+burn you reach for against Molt Wisps, the **Bulwark Roach** floors the spray you
+reach for against packs, the **Boulder Toad** deletes the gust you reach for against
+Marauders, the **Iron Nightstalker** plates over the riposte you reach for against
+dashes, and the **Wardshell Grub** spends the ambush you reach for against walkers.
+No stat is padded — these six are ordinary on every other axis, so the answer is
+always *pair the punished plant with the one it was never meant to fight alone*,
+not a new unlock. World 5 (levels 21–25) unlocks no Flora: `FLORA_UNLOCKS` carries
+five deliberately empty entries, which reads as a design statement, not an oversight.
 
 **Flora Batch 2 design notes** — the Crown eats statuses and shrugs off roots, so
 every new plant does its work with physics instead. **Ironbark Titan** is raw burst
@@ -215,7 +236,7 @@ All audio is generated with the Web Audio API at runtime:
 
 ## ⚖️ Balance Tooling
 
-`scripts/sim.ts` bundles a scripted average-skill player and plays all 20 levels
+`scripts/sim.ts` bundles a scripted average-skill player and plays all 25 levels
 headlessly — useful after tuning enemy stats. `scripts/novice.ts` runs the same
 levels with only the three starter plants, which is the check that a new world is
 actually harder than the last one:

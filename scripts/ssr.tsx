@@ -26,9 +26,11 @@ check('TitleScreen', () => renderToString(<TitleScreen hasSave onPlay={() => {}}
 check('GuideModal', () => renderToString(<GuideModal onClose={() => {}} />));
 check('WorldSelect', () => renderToString(<WorldSelect maxLevel={3} stars={{ 0: 3, 1: 2 }} onPick={() => {}} onBack={() => {}} />));
 check('LevelSelect w2', () => renderToString(<LevelSelect world={2} maxLevel={8} stars={{}} onPick={() => {}} onBack={() => {}} />));
-check('WorldSelect(all 4)', () => renderToString(<WorldSelect maxLevel={19} stars={{ 15: 3, 19: 2 }} onPick={() => {}} onBack={() => {}} />));
+check('WorldSelect(all 5)', () => renderToString(<WorldSelect maxLevel={24} stars={{ 15: 3, 19: 2, 24: 1 }} onPick={() => {}} onBack={() => {}} />));
 check('LevelSelect w4', () => renderToString(<LevelSelect world={4} maxLevel={19} stars={{}} onPick={() => {}} onBack={() => {}} />));
+check('LevelSelect w5', () => renderToString(<LevelSelect world={5} maxLevel={24} stars={{}} onPick={() => {}} onBack={() => {}} />));
 check('LoadoutScreen w4 boss', () => renderToString(<LoadoutScreen level={LEVELS[19]} picked={defaultLoadoutFor(LEVELS[19])} setPicked={() => {}} onStart={() => {}} onBack={() => {}} />));
+check('LoadoutScreen w5 boss', () => renderToString(<LoadoutScreen level={LEVELS[24]} picked={defaultLoadoutFor(LEVELS[24])} setPicked={() => {}} onStart={() => {}} onBack={() => {}} />));
 check('LoadoutScreen', () => renderToString(<LoadoutScreen level={LEVELS[6]} picked={defaultLoadoutFor(LEVELS[6])} setPicked={() => {}} onStart={() => {}} onBack={() => {}} />));
 check('PauseOverlay', () => renderToString(<PauseOverlay onResume={() => {}} onRestart={() => {}} onQuit={() => {}} />));
 check('WinOverlay', () => renderToString(<WinOverlay stars={3} isLast={false} onNext={() => {}} onReplay={() => {}} onMap={() => {}} />));
@@ -89,6 +91,13 @@ for (const e of s.enemies) {
     e.immuneT = 3.4;
     e.enraged = false;
   }
+  // ── Enemy Batch 3 visual states ──
+  if (e.key === 'regrow') e.regrowT = 1.6; // the knit is close — seams lit
+  if (e.key === 'nightstalker') {
+    e.dashT = 1.2; // mid-sprint blur
+    e.shieldUp = true; // plate up, glowing steel
+  }
+  if (e.key === 'wardshell') e.wardUp = true; // surprise dome standing
 }
 // a second King in another lane to cover the enraged render path
 {
@@ -130,6 +139,14 @@ check('Board(full combat)', () => renderToString(<Board s={s} alpha={0.5} onCell
     ['EmberlashVine', 'el-ember'],
     ['PrismBud', 'pb-crystal'],
     ['SentinelBloom petals', 'sb-petal'],
+    ['RegrowthHusk', 'rh-body'],
+    ['CinderGolem', 'cg-shell'],
+    ['BulwarkRoach', 'br-shell'],
+    ['BoulderToad', 'bt-hide'],
+    ['IronNightstalker', 'ns-plate'],
+    ['WardshellGrub', 'ws-body'],
+    ['nightstalker plate aura', 'cdd6de'],
+    ['wardshell dome', 'd8b4ff'],
   ] as const) {
     check(`sprite: ${label}`, () => {
       if (!html.includes(needle)) throw new Error(`${needle} not in rendered board`);

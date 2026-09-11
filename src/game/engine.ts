@@ -41,6 +41,9 @@ const BOSS_KNOCKBACK = 0.5; // Gale Fern: a boss is shoved half as far — it is
 const BEAM_SFX_EVERY = 5; // ticks — the Emberlash hum, not a machine gun
 const AMBUSH_REACH = 1.15; // Ambush Fern: must exceed the +1.05 blocking stand-off or nothing ever enters
 const PRISM_FIRE_SPLASH = 1; // Prism Bud: blast radius of the fire half of the alternation
+// ── Enemy Batch 3 ──
+const GRAZE_TO = 1; // Bulwark Roach: a hit under its floor comes down to this
+const RETREAT_FX_EVERY = 4; // ticks — the Nightstalker's dust while it bounds back
 
 // Deterministic RNG (mulberry32) — state lives on the GameState so the whole
 // simulation is reproducible from (level, loadout, seed).
@@ -185,6 +188,12 @@ function spawnOne(s: GameState, type: EnemyKey, lane: number, x: number, catapul
     immuneOn: false,
     immuneIdx: 0,
     enraged: false,
+    // ── Enemy Batch 3 ──
+    regrowT: 0,
+    shieldUp: false,
+    retreatTo: -1,
+    wardUp: def.tileWard !== undefined, // the walk-on itself enters a new tile
+    wardCol: Math.floor(x - FRONT_OFF),
   };
   s.enemies.push(e);
   if (catapulted) {
@@ -265,12 +274,33 @@ export interface DamageOpts {
   kind?: DmgKind; // defaults to a single-target 'physical' strike
   poisonDps?: number; // DoT channel (dormant: no Flora applies poison yet)
   poisonDur?: number;
+  // ── Enemy Batch 3 ──
+  fire?: boolean; // a burn/fire hit — a Cinder Golem drinks half of it
+  tick?: boolean; // a continuous DoT/beam tick, not a discrete hit (Roach floors hits only)
 }
 
 export function damageEnemy(s: GameState, e: EnemyEnt, dmg: number, o: DamageOpts = {}) {
   if (e.hp <= 0) return;
   const kind = o.kind ?? 'physical';
   const aoe = kind === 'splash'; // area damage is what wears a Stoneback slab down
+  const b3 = ENEMIES[e.key];
+  let dmg2 = dmg;
+
+  // ── Regrowth Husk: anything thrown at it restarts the knit. The heal only
+  // arrives in the quiet between hits — so slow burst with 3s swings feeds it,
+  // and steady fire starves it.
+  e.regrowT = 0;
+
+  // ── Bulwark Roach: a per-hit damage floor. A single hit under 10 raw damage
+  // skitters off the shell and lands for exactly 1. Needle-volleys spend
+  // themselves; a stream (beam/DoT ticks) is not a volley of hits, so it is
+  // exempt — burn still works on the Roach at full rate.
+  if (b3.hitFloor && !o.tick && dmg2 > 0 && dmg2 < b3.hitFloor) {
+    dmg2 = GRAZE_TO;
+    pushFx(s, 'graze', e.lane, e.x, 0.3);
+    s.events.push('graze');
+  }
+
   let slowPct = o.slowPct ?? 0;
   let slowDur = o.slowDur ?? 0;
   let poisonDps = o.poisonDps ?? 0;
@@ -317,12 +347,8 @@ export function damageEnemy(s: GameState, e: EnemyEnt, dmg: number, o: DamageOpt
     return;
   }
 
-  // Grovemaw Slug's absorbed shield soaks a flat fraction of whatever gets through.
-  let amount = dmg;
-  if (e.drPct > 0 && e.drUntil > s.t) amount *= 1 - e.drPct;
-  // The enraged Hollow King is wide open: it takes double damage.
-  if (e.enraged) amount *= 2;
-
+  // Statuses that ride on a swallowed hit still land — these blocks spend
+  // damage, not effects.
   const applyStatus = () => {
     if (slowPct > 0) {
       e.slowPct = Math.max(e.slowPct, slowPct);
@@ -333,6 +359,46 @@ export function damageEnemy(s: GameState, e: EnemyEnt, dmg: number, o: DamageOpt
       e.poisonUntil = Math.max(e.poisonUntil, s.t + poisonDur);
     }
   };
+
+  // ── Cinder Golem: the fired shell drinks burn. Every fire-type hit (Emberlash
+  // beam, Prism Bud's fire half) lands at half strength; physical and splash go
+  // in whole — which is precisely the "bring both channels" tax the tray pays.
+  if (o.fire && b3.fireResist && dmg2 > 0) {
+    dmg2 *= 1 - b3.fireResist;
+    if (dmg2 > 0.6 || (o.tick && s.tick % 8 === 0)) {
+      pushFx(s, 'resist', e.lane, e.x, 0.35);
+      s.events.push('resist');
+    }
+  }
+
+  // ── Iron Nightstalker: one-time plate, raised with each dash. The first hit
+  // it takes is simply not there — Sentinel Bloom's counter-strike clangs off
+  // it, and the shooter who leads with the big swing spends that swing for free.
+  if (e.shieldUp && dmg2 > 0) {
+    e.shieldUp = false;
+    pushFx(s, 'plate', e.lane, e.x, 0.5);
+    s.events.push('plate');
+    applyStatus(); // the blow is eaten; a chill riding on it is not
+    return;
+  }
+
+  // ── Wardshell Grub: the surprise ward spends itself on whatever touches it
+  // first inside a new tile — including an Ambush Fern's entire spring. The
+  // damage is zero; effects still land, so the counter is "hit it with one
+  // cheap thing, then hit it with everything else".
+  if (e.wardUp && dmg2 > 0) {
+    e.wardUp = false;
+    pushFx(s, 'shroud', e.lane, e.x, 0.55);
+    s.events.push('shroud');
+    applyStatus();
+    return;
+  }
+
+  // Grovemaw Slug's absorbed shield soaks a flat fraction of whatever gets through.
+  let amount = dmg2;
+  if (e.drPct > 0 && e.drUntil > s.t) amount *= 1 - e.drPct;
+  // The enraged Hollow King is wide open: it takes double damage.
+  if (e.enraged) amount *= 2;
 
   // Stoneback Grub: the slab blocks 100% of incoming damage and only splash
   // (Cactus volleys, Frostcap spores) can wear it down. Single-target pings off.
@@ -485,6 +551,13 @@ function projectileKind(f: FloraEnt, target: EnemyEnt): Proj['kind'] {
 /** Gale Fern: physical displacement. Not a status, so root immunity is irrelevant. */
 function knockBack(s: GameState, e: EnemyEnt, tiles: number) {
   if (e.hp <= 0 || e.burrowed || e.jumpT > 0) return; // sky is fine; soil and mid-leap are not shovable
+  // ── Boulder Toad: displacement simply does not apply. The gust washes over
+  // it like weather — this one has to be damaged down, full stop.
+  if (ENEMIES[e.key].knockImmune) {
+    pushFx(s, 'anchor', e.lane, e.x, 0.5);
+    s.events.push('anchor');
+    return;
+  }
   const push = ENEMIES[e.key].boss ? tiles * BOSS_KNOCKBACK : tiles;
   const from = e.x;
   e.x = Math.min(SPAWN_X, e.x + push); // never past the spawn line, or nothing could hit it
@@ -511,15 +584,18 @@ function fireProjectile(s: GameState, f: FloraEnt, target: EnemyEnt, opts: { loc
 
   // ── Prism Bud: every other shot leaves on a different damage channel, so
   // whichever one The Hollow King has warded, the next shot is on the other.
-  // The fire half is genuine splash — that is what makes it a different channel.
+  // The fire half is genuine splash — that is what makes it a different channel,
+  // and it is a burn hit: a Cinder Golem drinks half of that shot only.
   let dmgKind: DmgKind = atk.poisonDps ? 'poison' : atk.aoe || (atk.splash ?? 0) > 0 ? 'splash' : 'physical';
   let splash = atk.splash ?? 0;
   let aoe = !!atk.aoe;
+  let fire = !!atk.fire; // Emberlash marks itself; the Prism does not need to
   if (atk.altKind) {
     if (f.shotIdx % 2 === 1) {
       dmgKind = 'splash';
       splash = Math.max(splash, PRISM_FIRE_SPLASH);
       aoe = true;
+      fire = true;
     } else {
       dmgKind = 'physical';
       splash = 0;
@@ -551,6 +627,7 @@ function fireProjectile(s: GameState, f: FloraEnt, target: EnemyEnt, opts: { loc
     poisonDps: atk.poisonDps ?? 0,
     poisonDur: atk.poisonDur ?? 0,
     knockback: atk.knockback ?? 0,
+    fire, // burn hit — a Cinder Golem drinks half of it
   });
   f.fired = 0.16;
   s.events.push(kind === 'thorn' || kind === 'needle' ? 'shoot' : kind);
@@ -598,6 +675,20 @@ function rootEnemy(s: GameState, e: EnemyEnt, dur: number) {
   if (fresh) {
     pushFx(s, 'root', e.lane, e.x, 0.8);
     s.events.push('bind');
+  }
+}
+
+/**
+ * Wardshell Grub: entering a new tile re-arms the surprise ward — the first hit
+ * it takes inside that tile will be spent for nothing. A no-op for anything
+ * without a ward, so callers can run it after every movement path.
+ */
+function rearmWard(e: EnemyEnt) {
+  if (!ENEMIES[e.key].tileWard) return;
+  const tile = Math.floor(e.x - FRONT_OFF);
+  if (tile !== e.wardCol) {
+    e.wardCol = tile;
+    e.wardUp = true;
   }
 }
 
@@ -709,7 +800,9 @@ export function stepGame(s: GameState) {
           const target = findTarget(s, f);
           f.beamId = target ? target.id : null;
           if (target) {
-            damageEnemy(s, target, def.attack.dmg * TICK, { kind: 'physical', noFlash: true });
+            // tick:true — a held beam is a stream, not a volley of hits, so the
+            // Bulwark Roach's floor ignores it; fire:true — the Cinder Golem does not.
+            damageEnemy(s, target, def.attack.dmg * TICK, { kind: 'physical', noFlash: true, tick: true, fire: !!def.attack.fire });
             if (s.tick % BEAM_SFX_EVERY === 0) s.events.push('beam');
           }
         } else if (def.attack.spray) {
@@ -792,6 +885,24 @@ export function stepGame(s: GameState) {
         continue;
       }
 
+      // ── Iron Nightstalker repositioning: it does not settle in after the burst.
+      // It bounds back east at sprint speed, bites nothing on the way home, and
+      // re-arms the dash (plate and all) once it stops. Watchvine and Co. can
+      // still reach it the whole way.
+      if (e.retreatTo >= 0) {
+        const rSlow = e.slowUntil > s.t ? 1 - e.slowPct : 1;
+        e.x = Math.min(e.retreatTo, e.x + def.speed * DASH_MUL * rSlow * TICK);
+        e.chewing = false;
+        if (s.tick % RETREAT_FX_EVERY === 0) pushFx(s, 'dash', l, e.x, 0.26);
+        if (e.x >= e.retreatTo - 1e-9) {
+          e.retreatTo = -1;
+          e.dashUsed = false; // the next wall it meets gets the same treatment
+          s.events.push('dash');
+        }
+        rearmWard(e);
+        continue;
+      }
+
       let stop = -Infinity;
       // Conga line: keep spacing behind the enemy ahead. Clamped to the spawn
       // line — an unclamped shove near the east edge used to carry bodies past
@@ -822,6 +933,7 @@ export function stepGame(s: GameState) {
       const phaseMul = e.key === 'colossus' ? [0, 1, 1.4, 1.85][e.phase] : 1;
       const spd = def.speed * slowMul * phaseMul;
       e.x = Math.max(stop, e.x - spd * TICK);
+      rearmWard(e); // wardshells re-arm on every new tile they enter
 
       // ── Tunnel Larva surfacing: dirt, dust, and now it can be hurt
       if (def.burrowEmerge !== undefined) {
@@ -860,6 +972,14 @@ export function stepGame(s: GameState) {
           e.dashT = DASH_TIME;
           e.dashPassed = 0;
           e.dashCol = -1;
+          // ── Iron Nightstalker: the plate goes up WITH the sprint — the first
+          // hit of each dash is simply not there, which spends a Sentinel Bloom
+          // counter (or one big lead swing) on nothing.
+          if (def.dashShield) {
+            e.shieldUp = true;
+            pushFx(s, 'plate', l, e.x, 0.6);
+            s.events.push('plate');
+          }
           pushFx(s, 'dash', l, e.x, 0.55);
           s.events.push('dash');
         }
@@ -879,6 +999,12 @@ export function stepGame(s: GameState) {
               s.events.push('strike');
               e.dashT = 0;
               e.atkT = atkIntervalOf(e); // that burst counted as its first bite
+              // ── …except the Nightstalker, which was never going to settle. It
+              // bounds back east and re-arms; a fresh plate rises with the next sprint.
+              if (def.retreatAfterDash !== undefined) {
+                e.retreatTo = Math.min(SPAWN_X, e.x + def.retreatAfterDash);
+                s.events.push('dash');
+              }
             } else {
               e.dashPassed++;
               e.dashCol = tile;
@@ -1197,6 +1323,7 @@ export function stepGame(s: GameState) {
           kind: p.dmgKind,
           poisonDps: p.poisonDps,
           poisonDur: p.poisonDur,
+          fire: p.fire,
         });
       }
       if (p.rootDur > 0) rootEnemy(s, e, p.rootDur);
@@ -1283,7 +1410,7 @@ export function stepGame(s: GameState) {
       e.poisonDps = 0;
       continue;
     }
-    damageEnemy(s, e, e.poisonDps * TICK, { kind: 'poison' });
+    damageEnemy(s, e, e.poisonDps * TICK, { kind: 'poison', tick: true });
   }
 
   // ── Timers, fx, endings ──
@@ -1295,6 +1422,28 @@ export function stepGame(s: GameState) {
   if (s.lotusT > 0) s.lotusT = Math.max(0, s.lotusT - TICK);
   for (const e of s.enemies) if (e.hitFlash > 0) e.hitFlash -= TICK;
   for (const e of s.enemies) if (e.drPct > 0 && e.drUntil <= s.t) e.drPct = 0; // absorbed shield expires
+
+  // ── Regrowth Husk: two quiet seconds and the open wound knits itself shut.
+  // damageEnemy zeroes this clock on everything thrown at it, so a lane of
+  // Thornvines (1.4s a bite) never lets it tick over — while an Ironbark's 3s
+  // swing cadence hands it 15 HP back between every blow.
+  for (const e of s.enemies) {
+    const rg = ENEMIES[e.key].regrowHp;
+    if (!rg) continue;
+    e.regrowT += TICK;
+    const every = ENEMIES[e.key].regrowEvery ?? 2;
+    if (e.hp >= e.maxHp) {
+      e.regrowT = Math.min(e.regrowT, every); // full HP: the clock waits, it never overcharges
+      continue;
+    }
+    if (e.regrowT >= every) {
+      e.regrowT = 0;
+      const heal = Math.min(rg, e.maxHp - e.hp);
+      e.hp += heal;
+      pushFx(s, 'regrow', e.lane, e.x, 0.9, `+${heal}`);
+      s.events.push('regrow');
+    }
+  }
   if (s.shake > 0) s.shake -= TICK;
 
   if (s.pending.length === 0 && s.enemies.length === 0 && s.status === 'playing') {
@@ -1313,6 +1462,7 @@ const ENEMY_SORT: EnemyKey[] = [
   'gnat', 'skitter', 'beetle', 'warden', 'drifter',
   'vaulter', 'larva', 'grub', 'ranger', 'imp', 'thief', 'husk',
   'chitter', 'wisp', 'nightcap', 'wretch', 'marauder', 'slug',
+  'regrow', 'golem', 'roach', 'wardshell', 'toad', 'nightstalker',
   'brute', 'colossus', 'hollowking',
 ];
 

@@ -37,6 +37,13 @@ const ENEMY_GLOW: Record<string, string> = {
   nightcap: 'rgba(150,120,255,.55)',
   wretch: 'rgba(190,225,110,.5)',
   hollowking: 'rgba(210,160,255,.6)',
+  // ── Enemy Batch 3 ──
+  regrow: 'rgba(150,235,140,.5)',
+  golem: 'rgba(255,130,60,.55)',
+  roach: 'rgba(200,175,120,.45)',
+  toad: 'rgba(180,175,160,.45)',
+  nightstalker: 'rgba(190,200,220,.6)',
+  wardshell: 'rgba(216,180,255,.55)',
 };
 const FLORA_GLOW: Record<string, string> = {
   thornvine: 'rgba(125,255,176,.4)',
@@ -448,8 +455,13 @@ function EnemyView({ e, alpha, now }: { e: EnemyEnt; alpha: number; now: number 
   // ── Enemy Batch 2 state ──
   const drCap = def.drCap ?? 0.85;
   const shielded = e.drPct > 0 && e.drUntil > now; // Grovemaw Slug's absorbed film
-  const dashing = e.dashT > 0; // Nightcap Assassin mid-sprint
+  const dashing = e.dashT > 0; // Nightcap Assassin / Iron Nightstalker mid-sprint
   const warded = e.immuneTo !== null; // Hollow King has a damage channel shut
+  // ── Enemy Batch 3 state ──
+  const plated = e.shieldUp; // Nightstalker: the plate is up — the next hit is wasted
+  const domed = e.wardUp; // Wardshell Grub: the surprise ward is standing in this tile
+  const regrowing = !!def.regrowHp && e.regrowT >= (def.regrowEvery ?? 2) * 0.5; // the knit is close
+  const repositioning = e.retreatTo >= 0; // Nightstalker bounding back to re-arm
   const barTop = shielded || (e.maxShell > 0 && e.shell > 0) || (e.maxStone > 0 && e.stone > 0) ? -15 : -8;
   return (
     <div
@@ -463,8 +475,8 @@ function EnemyView({ e, alpha, now }: { e: EnemyEnt; alpha: number; now: number 
           e.burrowed
             ? 12 + e.lane // the dirt mound slides beneath everything
             : 24 + e.lane + (def.flying ? 30 : 0),
-        filter: `drop-shadow(0 0 8px ${ENEMY_GLOW[e.key]}) ${e.hitFlash > 0 ? 'brightness(2) saturate(1.6)' : ''} ${slowed ? 'drop-shadow(0 0 6px rgba(140,215,255,.8)) hue-rotate(-12deg)' : ''} ${e.stunT > 0 ? 'saturate(.6) brightness(.85)' : ''} ${rooted ? 'drop-shadow(0 0 8px rgba(127,224,192,.9))' : ''} ${shielded ? 'drop-shadow(0 0 10px rgba(168,255,208,.9))' : ''} ${dashing ? 'blur(0.6px) brightness(1.25)' : ''} ${e.enraged ? 'brightness(1.35) saturate(1.7) drop-shadow(0 0 14px rgba(255,80,80,.95))' : ''} ${warded ? 'drop-shadow(0 0 12px rgba(127,212,255,.9))' : ''}`,
-        transform: `${e.chewing ? 'translateX(-2px) rotate(-1.5deg)' : ''} ${e.jumpT > 0 ? `rotate(${jumpProg * -14}deg)` : ''} ${fleeing ? 'scaleX(-1)' : ''}`,
+        filter: `drop-shadow(0 0 8px ${ENEMY_GLOW[e.key]}) ${e.hitFlash > 0 ? 'brightness(2) saturate(1.6)' : ''} ${slowed ? 'drop-shadow(0 0 6px rgba(140,215,255,.8)) hue-rotate(-12deg)' : ''} ${e.stunT > 0 ? 'saturate(.6) brightness(.85)' : ''} ${rooted ? 'drop-shadow(0 0 8px rgba(127,224,192,.9))' : ''} ${shielded ? 'drop-shadow(0 0 10px rgba(168,255,208,.9))' : ''} ${dashing ? 'blur(0.6px) brightness(1.25)' : ''} ${e.enraged ? 'brightness(1.35) saturate(1.7) drop-shadow(0 0 14px rgba(255,80,80,.95))' : ''} ${warded ? 'drop-shadow(0 0 12px rgba(127,212,255,.9))' : ''} ${plated ? 'drop-shadow(0 0 10px rgba(205,214,222,.95))' : ''} ${domed ? 'drop-shadow(0 0 8px rgba(216,180,255,.85))' : ''} ${regrowing ? 'drop-shadow(0 0 8px rgba(126,231,135,.85))' : ''} ${repositioning ? 'brightness(1.15) blur(0.4px)' : ''}`,
+        transform: `${e.chewing ? 'translateX(-2px) rotate(-1.5deg)' : ''} ${e.jumpT > 0 ? `rotate(${jumpProg * -14}deg)` : ''} ${fleeing || repositioning ? 'scaleX(-1)' : ''}`,
         opacity: e.burrowed ? 0.85 : 1,
       }}
     >
@@ -482,6 +494,9 @@ function EnemyView({ e, alpha, now }: { e: EnemyEnt; alpha: number; now: number 
           shieldFrac={shielded ? e.drPct / drCap : 0}
           dashing={dashing}
           warded={warded}
+          regrowing={regrowing}
+          plated={plated}
+          domed={domed}
         />
       </div>
       {/* Bindweed Snare: living ropes pinning it to the ground */}
@@ -933,6 +948,88 @@ function FxView({ fx }: { fx: Fx }) {
         <div className="anim-shockwave absolute inset-0 rounded-full border-4 border-[#ff3d3d]" style={{ background: 'radial-gradient(circle, rgba(255,61,61,.45) 0%, rgba(255,154,61,.25) 45%, transparent 72%)' }} />
         <div className="anim-floatup absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap font-display text-[22px] font-black tracking-[0.18em]" style={{ color: '#ff7d95', textShadow: '0 0 14px rgba(255,61,61,.95), 0 2px 3px #000' }}>
           ENRAGED
+        </div>
+      </div>
+    );
+  }
+  // ── Enemy Batch 3 fx ──
+  if (fx.kind === 'regrow') {
+    // Regrowth Husk: the seams pull shut and the wound knits itself closed
+    return (
+      <div className="pointer-events-none absolute z-[66]" style={{ left: px(fx.x) - 30, top: laneY(fx.lane) + CELL_H / 2 - 40 }}>
+        <div className="anim-ringburst absolute rounded-full border-[3px] border-[#7ee787]" style={{ left: 6, top: 10, width: 48, height: 48 }} />
+        <svg viewBox="0 0 60 60" width={60} height={60} className="anim-pop overflow-visible">
+          <path d="M12 40 C 20 26 40 26 48 40 M 16 46 C 26 36 34 36 44 46" fill="none" stroke="#a3f2a0" strokeWidth="3.4" strokeLinecap="round" />
+          <path d="M22 30 l 1 10 M 30 28 l 0 11 M 38 30 l -1 10" stroke="#d9ffb0" strokeWidth="2.4" strokeLinecap="round" />
+        </svg>
+        <div className="anim-floatup absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap font-ui text-[15px] font-black" style={{ color: '#a3f2a0', textShadow: '0 0 10px rgba(87,193,120,.95), 0 2px 2px #000' }}>
+          {fx.text ?? 'KNIT'}
+        </div>
+      </div>
+    );
+  }
+  if (fx.kind === 'resist') {
+    // Cinder Golem: a fire hit lands and the clay drinks half of it
+    return (
+      <div className="pointer-events-none absolute z-[65]" style={{ left: px(fx.x) - 24, top: laneY(fx.lane) + CELL_H / 2 - 36 }}>
+        <div className="anim-puff rounded-full" style={{ width: 48, height: 40, background: 'radial-gradient(circle, rgba(255,154,61,.5) 0%, transparent 70%)' }} />
+        <svg viewBox="0 0 48 40" width={48} height={40} className="anim-pop absolute inset-0 overflow-visible">
+          <path d="M10 30 C 8 20 14 12 24 10 C 34 8 40 16 38 26" fill="none" stroke="#ffd76a" strokeWidth="3" strokeLinecap="round" />
+          <path d="M24 6 l 5 8 M 36 12 l 6 2 M 12 18 l -6 4" stroke="#ff9a3d" strokeWidth="2.6" strokeLinecap="round" />
+        </svg>
+        <div className="anim-floatup absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap font-ui text-[13px] font-black" style={{ color: '#ffcf6b', textShadow: '0 0 8px rgba(217,96,46,.95), 0 2px 2px #000' }}>
+          HALF
+        </div>
+      </div>
+    );
+  }
+  if (fx.kind === 'graze') {
+    // Bulwark Roach: a small hit skitters off the plates
+    return (
+      <div className="pointer-events-none absolute z-[65]" style={{ left: px(fx.x) - 16, top: laneY(fx.lane) + CELL_H / 2 - 30 }}>
+        <svg viewBox="0 0 32 32" width={32} height={32} className="anim-pop overflow-visible">
+          <path d="M16 4 L 19 13 L 28 16 L 19 19 L 16 28 L 13 19 L 4 16 L 13 13 Z" fill="#e8d9a0" stroke="#0d1b13" strokeWidth="1.4" />
+        </svg>
+        <div className="anim-floatup absolute -top-2 left-4 font-ui text-[12px] font-black" style={{ color: '#c9c2b0', textShadow: '0 1px 2px #000' }}>1</div>
+      </div>
+    );
+  }
+  if (fx.kind === 'anchor') {
+    // Boulder Toad: the gust slides off granite
+    return (
+      <div className="pointer-events-none absolute z-[64]" style={{ left: px(fx.x) - 34, top: laneY(fx.lane) + CELL_H / 2 - 30 }}>
+        <svg viewBox="0 0 68 48" width={68} height={48} className="anim-burst overflow-visible">
+          <path d="M64 12 C 46 6 22 10 6 20" fill="none" stroke="#dff5ff" strokeWidth="3.6" strokeLinecap="round" opacity="0.7" />
+          <path d="M62 28 C 44 22 24 26 10 34" fill="none" stroke="#a8e0f0" strokeWidth="3" strokeLinecap="round" opacity="0.5" />
+        </svg>
+        <div className="anim-puff absolute left-3 top-6 rounded-full" style={{ width: 44, height: 26, background: 'radial-gradient(circle, #8f8a7c66 0%, transparent 70%)' }} />
+        <div className="anim-floatup absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap font-ui text-[13px] font-black" style={{ color: '#d8d2c0', textShadow: '0 1px 2px #000' }}>UNMOVED</div>
+      </div>
+    );
+  }
+  if (fx.kind === 'plate') {
+    // Iron Nightstalker: something hits the pauldron and the night just eats it
+    return (
+      <div className="pointer-events-none absolute z-[68]" style={{ left: px(fx.x) - 26, top: laneY(fx.lane) + CELL_H / 2 - 38 }}>
+        <div className="anim-ringburst absolute rounded-full border-[3px] border-[#cdd6de]" style={{ left: 8, top: 10, width: 38, height: 38 }} />
+        <svg viewBox="0 0 52 52" width={52} height={52} className="anim-pop overflow-visible">
+          <path d="M14 20 C 22 10 38 10 44 22 C 38 30 24 32 16 28 Z" fill="#cdd6de" stroke="#0d1b13" strokeWidth="2.4" strokeLinejoin="round" />
+          <path d="M8 10 l 8 8 M 46 8 l -6 8 M 26 2 l 0 8" stroke="#eef5ff" strokeWidth="2.6" strokeLinecap="round" />
+        </svg>
+      </div>
+    );
+  }
+  if (fx.kind === 'shroud') {
+    // Wardshell Grub: the dome catches the first touch of a tile and cracks free
+    return (
+      <div className="pointer-events-none absolute z-[68]" style={{ left: px(fx.x) - 30, top: laneY(fx.lane) + CELL_H / 2 - 42 }}>
+        <div className="anim-shockwave absolute rounded-full border-[3px] border-[#d8b4ff]" style={{ left: 4, top: 6, width: 52, height: 52 }} />
+        <svg viewBox="0 0 60 60" width={60} height={60} className="anim-pop overflow-visible">
+          <path d="M10 38 C 6 20 20 8 32 8 C 46 8 56 20 52 36" fill="none" stroke="#d8b4ff" strokeWidth="2.8" strokeLinecap="round" strokeDasharray="10 6" />
+          <path d="M30 8 L 26 20 L 36 24 L 30 34" fill="none" stroke="#f0e2ff" strokeWidth="2.4" strokeLinejoin="round" />
+        </svg>
+        <div className="anim-floatup absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap font-ui text-[13px] font-black" style={{ color: '#d8b4ff', textShadow: '0 0 10px rgba(168,110,210,.9), 0 2px 2px #000' }}>
+          NO SELL
         </div>
       </div>
     );

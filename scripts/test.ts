@@ -809,7 +809,7 @@ function run(s: ReturnType<typeof createGame>, secs: number, each?: () => void) 
 // ── 35. Campaign wiring: World 4 exists, is gated, and reports its threats ──
 {
   console.log('World 4 wiring');
-  ok(LEVELS.length === 20, `20 levels (got ${LEVELS.length})`);
+  ok(LEVELS.length === 25, `25 levels (got ${LEVELS.length})`);
   const w4 = LEVELS.filter((l) => l.world === 4);
   ok(w4.length === 5 && w4.map((l) => l.id).join(',') === '15,16,17,18,19', 'five levels, ids 15–19');
   ok(LEVELS[19].boss === 'hollowking', 'the world finale is the Hollow King');
@@ -825,7 +825,7 @@ function run(s: ReturnType<typeof createGame>, secs: number, each?: () => void) 
   // every enemy key resolves to a stat block (Record<EnemyKey,…> would not compile otherwise, but be sure)
   let allResolve = true;
   for (const k of Object.keys(ENEMIES)) if (!ENEMIES[k as EnemyKey]?.name) allResolve = false;
-  ok(allResolve && Object.keys(ENEMIES).length === 21, `21 Blightspawn defined (got ${Object.keys(ENEMIES).length})`);
+  ok(allResolve && Object.keys(ENEMIES).length === 27, `27 Blightspawn defined (got ${Object.keys(ENEMIES).length})`);
 }
 
 // ── 36. Ironbark Titan: raw burst a Grovemaw Slug cannot eat ──
@@ -1086,6 +1086,245 @@ function run(s: ReturnType<typeof createGame>, secs: number, each?: () => void) 
   const g = spawnEnemy(s2, 'gnat', 1, 9.2);
   run(s2, 12);
   ok(g.x <= SPAWN_X_EDGE + 0.001, `a knocked-back gnat stays in reach (x=${g.x.toFixed(2)})`);
+}
+
+// ── 45. Enemy Batch 3 wiring: World 5 fields the Reckoning ──
+{
+  console.log('World 5 wiring');
+  ok(LEVELS.length === 25, `25 levels (got ${LEVELS.length})`);
+  const w5 = LEVELS.filter((l) => l.world === 5);
+  ok(w5.length === 5 && w5.map((l) => l.id).join(',') === '20,21,22,23,24', 'five levels, ids 20–24');
+  ok(LEVELS[24].boss === 'hollowking', 'the finale is the King again, with the Reckoning as his court');
+  const fielded = new Set<EnemyKey>();
+  for (const l of w5) for (const w of l.waves) for (const g of w.groups) fielded.add(g.type);
+  for (const k of ['regrow', 'golem', 'roach', 'toad', 'nightstalker', 'wardshell'] as EnemyKey[]) {
+    ok(fielded.has(k), `${ENEMIES[k].name} debuts in a World 5 wave`);
+    const e = ENEMIES[k];
+    ok(!!e.name && !!e.desc && !!e.counter, `${e.name}: full stat block with a printed counter`);
+  }
+  const intel = levelEnemyIntel(LEVELS[24]);
+  for (const k of ['regrow', 'golem', 'roach', 'toad', 'nightstalker', 'wardshell'] as EnemyKey[]) {
+    ok(intel.includes(k), `${ENEMIES[k].name} shows up in the finale intel`);
+  }
+  // no Flora Batch 3 — the loop closes with the tray you already own
+  ok(unlockedFloraFor(19).length === 20 && unlockedFloraFor(24).length === 20, 'nothing unlocks after the Crown');
+  // threat-aware defaults reach for the right answers
+  ok(defaultLoadoutFor(LEVELS[20]).includes('emberlash'), 'a Regrowth Husk level defaults to sustained burn');
+  ok(defaultLoadoutFor(LEVELS[21]).includes('ironbark'), 'a Cinder Golem level defaults to raw physical');
+  ok(defaultLoadoutFor(LEVELS[22]).includes('ironbark'), 'a Bulwark Roach level defaults to one big hit');
+  ok(defaultLoadoutFor(LEVELS[22]).includes('needlereed'), '…and a ward-popper for the Grub beside it');
+  ok(defaultLoadoutFor(LEVELS[23]).includes('gale'), 'a Nightstalker level defaults to the gust that cancels sprints');
+}
+
+// ── 46. Regrowth Husk: heals in the gaps between shots, never under a stream ──
+{
+  console.log('Regrowth Husk');
+  const s = fresh();
+  const h = spawnEnemy(s, 'regrow', 0, 6);
+  damageEnemy(s, h, 30);
+  ok(h.hp === 70, 'takes damage normally');
+  run(s, 1.9);
+  ok(h.hp === 70, 'no healing inside the 2s window');
+  run(s, 0.2);
+  ok(h.hp === 85, `knits 15 back just after 2s unhit (hp=${h.hp})`);
+  run(s, 4.2);
+  ok(h.hp === 100, 'and never knits past max HP');
+  // every hit restarts the clock
+  const s2 = fresh();
+  const h2 = spawnEnemy(s2, 'regrow', 1, 6);
+  damageEnemy(s2, h2, 40);
+  run(s2, 1.5);
+  damageEnemy(s2, h2, 10);
+  run(s2, 1.5);
+  ok(h2.hp === 50, 'a hit inside the window restarts it (no early heal)');
+  run(s2, 0.6);
+  ok(h2.hp === 65, 'the knit lands 2s after the LAST hit');
+  // integration: the 1.4s Thornvine never lets it tick; the Ironbark's 3s gaps feed it
+  const s3 = fresh();
+  placeFlora(s3, 'bramble', 2, 1);
+  placeFlora(s3, 'thornvine', 2, 0);
+  const h3 = spawnEnemy(s3, 'regrow', 2, 6);
+  h3.hp = 400; h3.maxHp = 400;
+  run(s3, 20);
+  ok(s3.events.filter((e) => e === 'regrow').length === 0, 'Thornvine cadence never leaves a 2s gap — zero heals');
+  const s4 = fresh();
+  placeFlora(s4, 'bramble', 3, 1);
+  placeFlora(s4, 'ironbark', 3, 0);
+  const h4 = spawnEnemy(s4, 'regrow', 3, 6);
+  h4.hp = 500; h4.maxHp = 500;
+  run(s4, 16);
+  const healed = s4.events.filter((e) => e === 'regrow').length;
+  ok(healed >= 3, `the 3s swing gap is exactly its dinner bell — ${healed} heals landed over 16s`);
+}
+
+// ── 47. Cinder Golem: burn at half, everything else whole ──
+{
+  console.log('Cinder Golem');
+  const s = fresh();
+  const g = spawnEnemy(s, 'golem', 0, 6);
+  damageEnemy(s, g, 16, { fire: true });
+  ok(g.hp === g.maxHp - 8, `a fire hit lands for half (16 raw → ${g.maxHp - g.hp})`);
+  damageEnemy(s, g, 16);
+  ok(g.hp === g.maxHp - 24, 'a physical hit goes in whole');
+  damageEnemy(s, g, 16, { kind: 'splash' });
+  ok(g.hp === g.maxHp - 40, 'splash that is not fire is not resisted either');
+  // the Emberlash beam really is a burn source: it smoulders here
+  const s2 = fresh();
+  placeFlora(s2, 'emberlash', 1, 0);
+  s2.trayCd['emberlash'] = 0; // second copy, same tick: skip the tray recharge gate
+  placeFlora(s2, 'emberlash', 2, 0);
+  const g2 = spawnEnemy(s2, 'golem', 1, 5);
+  const gnat = spawnEnemy(s2, 'gnat', 2, 5);
+  gnat.hp = 500; gnat.maxHp = 500; // durable control — an ordinary gnat would simply burn out
+  run(s2, 5);
+  const golemLost = g2.maxHp - g2.hp;
+  const gnatLost = gnat.maxHp - gnat.hp;
+  ok(golemLost > 16 && golemLost < 23, `the beam does ~half light on the Golem (${golemLost.toFixed(1)} over 5s)`);
+  ok(gnatLost > 34, `the same 5s burns a gnat down for ${gnatLost.toFixed(1)}`);
+  // Prism Bud alternation: the bolt lands whole, the fire burst lands halved
+  const s3 = fresh();
+  placeFlora(s3, 'prism', 3, 0);
+  spawnEnemy(s3, 'golem', 3, 5);
+  const fired: boolean[] = [];
+  let lastId = 0;
+  run(s3, 8, () => {
+    for (const p of s3.projs) if (p.id > lastId) { lastId = p.id; fired.push(p.fire); }
+  });
+  ok(fired.length >= 3, `the Prism kept firing (got ${fired.length} shots)`);
+  ok(!fired[0] && fired[1] && !fired[2], 'bolt — fire — bolt: only the middle shot is a burn hit');
+  // a Cactus volley is concussion, not fire: full value
+  const s4 = fresh();
+  placeFlora(s4, 'cactus', 4, 0);
+  const g4 = spawnEnemy(s4, 'golem', 4, 5);
+  run(s4, 2.0);
+  ok(g4.maxHp - g4.hp === 15, `one Cactus spike lands whole (${g4.maxHp - g4.hp})`);
+}
+
+// ── 48. Bulwark Roach: small hits floor to chipping ──
+{
+  console.log('Bulwark Roach');
+  const s = fresh();
+  const r = spawnEnemy(s, 'roach', 0, 6);
+  damageEnemy(s, r, 6);
+  ok(r.hp === r.maxHp - 1, 'a 6-damage needle is floored to 1');
+  damageEnemy(s, r, 9);
+  ok(r.hp === r.maxHp - 2, '9 is under the floor too');
+  damageEnemy(s, r, 10);
+  ok(r.hp === r.maxHp - 12, '10 is at the floor, not under it — full damage');
+  // the plant it exists to neutralise
+  const s2 = fresh();
+  placeFlora(s2, 'needlereed', 1, 0);
+  const r2 = spawnEnemy(s2, 'roach', 1, 5);
+  run(s2, 2.4);
+  ok(r2.maxHp - r2.hp === 5, `a whole five-needle volley spends itself for ${r2.maxHp - r2.hp}`);
+  // one Thornvine bite out-damages that entire Reed volley
+  const s3 = fresh();
+  placeFlora(s3, 'thornvine', 2, 0);
+  const r3 = spawnEnemy(s3, 'roach', 2, 5);
+  run(s3, 1.6);
+  ok(r3.maxHp - r3.hp >= 18, `a single 18-damage bite lands whole (${r3.maxHp - r3.hp})`);
+  // the beam is a stream, not a volley of hits — the floor does not eat it
+  const s4 = fresh();
+  placeFlora(s4, 'emberlash', 3, 0);
+  const r4 = spawnEnemy(s4, 'roach', 3, 5);
+  run(s4, 5);
+  ok(r4.maxHp - r4.hp > 30, `Emberlash still does full work (${(r4.maxHp - r4.hp).toFixed(0)} dmg over 5s)`);
+}
+
+// ── 49. Boulder Toad: displacement simply does not apply ──
+{
+  console.log('Boulder Toad');
+  const s = fresh();
+  placeFlora(s, 'gale', 0, 0);
+  const t = spawnEnemy(s, 'toad', 0, 4.5);
+  const x0 = t.x;
+  run(s, 6.5);
+  ok(s.events.includes('anchor'), 'the gust washes over it — and you can see it break');
+  ok(t.x < x0, `it never stops advancing (x=${t.x.toFixed(2)} vs spawn ${x0})`);
+  ok(t.hp === t.maxHp, 'the gust also deals no damage, it was always 0 — the toad just ignores the rest');
+  // control: a gnat gets shoved two full tiles
+  const s2 = fresh();
+  placeFlora(s2, 'gale', 1, 0);
+  const g = spawnEnemy(s2, 'gnat', 1, 4.5);
+  run(s2, 3.6);
+  ok(g.x > 5, `the same gust shoves a gnat back (x=${g.x.toFixed(2)})`);
+  // damaged down is the answer: normal damage lands whole
+  damageEnemy(s, t, 40);
+  ok(t.hp === t.maxHp - 40, 'raw hits go in at full value');
+}
+
+// ── 50. Iron Nightstalker: the plate eats the riposte, the burst lands, the dash re-arms ──
+{
+  console.log('Iron Nightstalker');
+  const s = fresh();
+  placeFlora(s, 'sentinelbloom', 0, 4);
+  const n = spawnEnemy(s, 'nightstalker', 0, 7.2);
+  run(s, 7.4);
+  ok(n.dashUsed, 'a lone wall sets it sprinting, plate up');
+  ok(n.hp === n.maxHp, `the Bloom's 50-damage riposte clangs off — zero damage (hp=${n.hp}/${n.maxHp})`);
+  ok(s.grid[0][4]!.struck.size === 1, 'and the Bloom has spent its one counter on nothing');
+  damageEnemy(s, n, 18);
+  ok(n.hp === n.maxHp - 18, 'the next hit goes straight through');
+  // the full loop: past two, burst the third, bound away, re-arm, come again
+  const s2 = fresh();
+  placeFlora(s2, 'bramble', 1, 5);
+  s2.trayCd['bramble'] = 0; // two brambles in one tick: skip the per-key tray recharge
+  placeFlora(s2, 'bramble', 1, 4);
+  placeFlora(s2, 'glowbulb', 1, 3);
+  const n2 = spawnEnemy(s2, 'nightstalker', 1, 8.2);
+  run(s2, 13.5);
+  ok(s2.events.filter((e) => e === 'strike').length === 2, 'two bursts into the back row, a cycle apart');
+  ok(!s2.grid[1][3], 'the Glowbulb paid for both');
+  ok(s2.events.filter((e) => e === 'plate').length >= 2, 'a fresh plate rose with the second dash');
+  ok(s2.enemies.includes(n2), 'and it is still out there');
+  // the bound east is observable and lands at the far end of the lane
+  const s3 = fresh();
+  const n3 = spawnEnemy(s3, 'nightstalker', 3, 5.5);
+  n3.dashUsed = true; n3.shieldUp = false; n3.retreatTo = 7.5;
+  run(s3, 2);
+  ok(n3.retreatTo === -1, 'the bound ends at the far end of the lane');
+  ok(n3.dashUsed === false, 'and the dash is re-armed for another pass');
+  ok(n3.x > 6.5, `it really ran east first (x=${n3.x.toFixed(2)})`);
+  // control: a plain Nightcap Assassin has no plate and pays for the Bloom in full
+  const s4 = fresh();
+  placeFlora(s4, 'sentinelbloom', 4, 4);
+  const nc = spawnEnemy(s4, 'nightcap', 4, 7.2);
+  run(s4, 7.4);
+  ok(nc.hp === nc.maxHp - 50, 'Nightcap still eats the full counter-strike — this is a plate, not a rework');
+}
+
+// ── 51. Wardshell Grub: one free hit per tile, and it is once, not forever ──
+{
+  console.log('Wardshell Grub');
+  const s = fresh();
+  placeFlora(s, 'ambush', 0, 4);
+  const g = spawnEnemy(s, 'wardshell', 0, 7);
+  run(s, 8.6); // walks in at 0.19: arrival at the Fern's mouth is ~8.0s
+  ok(g.hp === g.maxHp, `the 120-damage ambush is spent on the ward and lands for zero (hp=${g.hp})`);
+  ok(s.grid[0][4]!.ambushT > 0, 'and the fern folds away anyway — the trap was consumed');
+  damageEnemy(s, g, 30);
+  ok(g.hp === g.maxHp - 30, 'the next hit inside the same tile goes in whole');
+  const wcol = g.wardCol;
+  g.x -= 1.1;
+  stepGame(s);
+  ok(g.wardUp && g.wardCol !== wcol, 'stepping one tile west raises a fresh ward');
+  damageEnemy(s, g, 30);
+  ok(g.hp === g.maxHp - 30, 'and the first hit inside the new tile is spent on nothing');
+  damageEnemy(s, g, 25);
+  ok(g.hp === g.maxHp - 55, '…but the second one in that tile bites');
+  // multi-hit sources eat the ward for free and still land their volley
+  const s2 = fresh();
+  placeFlora(s2, 'needlereed', 1, 0);
+  const g2 = spawnEnemy(s2, 'wardshell', 1, 5);
+  run(s2, 2.4);
+  ok(g2.maxHp - g2.hp === 24, `one needle springs the ward, the other four land (lost ${g2.maxHp - g2.hp})`);
+  // statuses ride through the nullified hit
+  const s3 = fresh();
+  placeFlora(s3, 'frostcap', 2, 0);
+  const g3 = spawnEnemy(s3, 'wardshell', 2, 5);
+  run(s3, 3);
+  ok(g3.hp === g3.maxHp, 'the first spore is spent on the dome…');
+  ok(g3.slowUntil > s3.t, '…but the chill still lands — the ward blocks damage, not effects');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

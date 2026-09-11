@@ -1437,6 +1437,226 @@ function FenWretch() {
   );
 }
 
+// ─────────────────────────── ENEMY BATCH 3 ──────────────────────────────────
+// One Blightspawn per Flora Batch 2 trick — read the tells in their art:
+// the Husk's seams glow while it knits, the Golem's cracks keep glowing when
+// fire lands on it, the Toad grips the ground, the Roach plates every hit
+// flat, the Nightstalker's steel pauldron rises with each dash, and the
+// Grub's glass dome stands until the first touch shatters it.
+function RegrowthHusk({ regrowing }: { regrowing: boolean }) {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible -scale-x-100">
+      <defs>
+        <linearGradient id="rh-body" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#8fae6a" />
+          <stop offset="0.6" stopColor="#5c7a42" />
+          <stop offset="1" stopColor="#38512a" />
+        </linearGradient>
+      </defs>
+      <g className="anim-lurch-slow">
+        <path d="M36 78 l -6 12 M 58 78 l 5 12" stroke={O} strokeWidth="5.6" strokeLinecap="round" />
+        <path d="M30 44 C 18 52 14 66 20 78 C 34 84 64 84 78 76 C 84 62 80 48 70 42 C 56 36 42 37 30 44 Z" fill="url(#rh-body)" stroke={O} strokeWidth="3.4" strokeLinejoin="round" />
+        {/* the torn chest — an open wound of pale wood */}
+        <path d="M40 52 C 48 46 60 47 66 54 C 62 66 46 68 40 52 Z" fill="#c9b878" stroke={O} strokeWidth="2.4" strokeLinejoin="round" />
+        <path d="M46 54 l 3 10 M 56 53 l 1 11 M 62 56 l -2 8" stroke="#8a6f4c" strokeWidth="2" strokeLinecap="round" />
+        {/* knitting seams — sap-bright vines pulling the wound shut */}
+        <g className={regrowing ? 'anim-breathe' : undefined} opacity={regrowing ? 1 : 0.55}>
+          <path d="M38 50 C 48 42 60 43 68 52 M 40 64 C 50 70 62 69 70 62" fill="none" stroke={regrowing ? '#a3f2a0' : '#6f8f5a'} strokeWidth="3.2" strokeLinecap="round" />
+          <path d="M44 46 l 1 8 M 54 44 l 0 9 M 64 47 l -1 8 M 48 68 l 0 -8 M 58 69 l 1 -8" stroke={regrowing ? '#d9ffb0' : '#6f8f5a'} strokeWidth="2.2" strokeLinecap="round" />
+        </g>
+        {/* head sunk in the shoulders */}
+        <path d="M34 40 C 30 30 36 22 46 22 C 56 22 60 32 55 40 C 48 44 40 44 34 40 Z" fill="#6a8a4c" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+        <ellipse cx="44" cy="32" rx="7" ry="4.6" fill="#141c08" stroke={O} strokeWidth="1.8" />
+        <circle cx="42.4" cy="32" r="2.1" fill="#c8ff6a" className="anim-breathe" />
+        {regrowing && <circle cx="52" cy="56" r="26" fill="none" stroke="#7ee787" strokeWidth="2.4" opacity="0.55" className="anim-pulse-ring" />}
+        {/* moss fur growing over the husk */}
+        <circle cx="28" cy="60" r="3.4" fill="#7fae62" opacity="0.6" />
+        <circle cx="72" cy="66" r="3" fill="#7fae62" opacity="0.5" />
+      </g>
+    </svg>
+  );
+}
+
+function CinderGolem() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible -scale-x-100">
+      <defs>
+        <linearGradient id="cg-shell" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#6e5a4c" />
+          <stop offset="0.55" stopColor="#4a3a32" />
+          <stop offset="1" stopColor="#2b211d" />
+        </linearGradient>
+      </defs>
+      <g className="anim-lurch-slow">
+        {/* squat kiln-fired frame */}
+        <path d="M26 82 C 16 66 18 42 34 32 C 52 21 74 26 82 42 C 90 58 86 76 74 84 C 58 90 38 90 26 82 Z" fill="url(#cg-shell)" stroke={O} strokeWidth="3.8" strokeLinejoin="round" />
+        {/* the glaze has cooled matte on the outside… */}
+        <path d="M34 40 C 48 34 64 35 74 44 M 30 56 C 42 50 60 50 72 56" stroke="#241b16" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.9" />
+        {/* …but every crack still glows */}
+        <path d="M46 30 L 42 46 L 50 56 L 44 72 M 64 34 L 68 48 L 60 60 L 66 76" stroke="#ff7a3d" strokeWidth="2.8" fill="none" strokeLinecap="round" className="anim-breathe" />
+        <path d="M46 30 L 42 46 L 50 56 L 44 72" stroke="#ffd76a" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.9" />
+        {/* a chimney crown venting smoke */}
+        <path d="M40 26 C 42 16 58 14 62 24 C 55 20 47 21 40 26 Z" fill="#241b16" stroke={O} strokeWidth="2.6" strokeLinejoin="round" />
+        <g className="anim-mist" opacity="0.5">
+          <circle cx="50" cy="10" r="5" fill="#c9c2b0" />
+          <circle cx="60" cy="6" r="3.6" fill="#c9c2b0" />
+        </g>
+        {/* eyes behind the glaze */}
+        <ellipse cx="42" cy="50" rx="6.4" ry="4.4" fill="#160f0b" stroke={O} strokeWidth="2" />
+        <circle cx="41" cy="50" r="2.4" fill="#ffb15e" className="anim-breathe" />
+        {/* heavy fists planted at its sides */}
+        <path d="M22 66 C 14 66 10 72 12 78 C 14 84 22 84 26 80 Z" fill="#4a3a32" stroke={O} strokeWidth="2.8" strokeLinejoin="round" />
+        <path d="M80 62 C 88 62 92 68 90 74 C 88 80 82 80 78 76 Z" fill="#4a3a32" stroke={O} strokeWidth="2.8" strokeLinejoin="round" />
+        <g className="anim-twinkle">
+          <circle cx="34" cy="26" r="1.8" fill="#ffb15e" />
+          <circle cx="70" cy="24" r="1.5" fill="#ff7a3d" />
+        </g>
+      </g>
+    </svg>
+  );
+}
+
+function BulwarkRoach() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible -scale-x-100">
+      <defs>
+        <linearGradient id="br-shell" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#b09a6a" />
+          <stop offset="0.5" stopColor="#7c6a45" />
+          <stop offset="1" stopColor="#544629" />
+        </linearGradient>
+      </defs>
+      <g className="anim-settle">
+        {/* six spiky legs */}
+        <path d="M30 62 l -12 6 M 34 70 l -9 10 M 42 76 l -4 8 M 60 76 l 5 8 M 66 68 l 11 9 M 70 60 l 13 4" stroke={O} strokeWidth="3" strokeLinecap="round" className="anim-legs" />
+        {/* the broad flattened shield-back — three overlapping plates */}
+        <path d="M16 56 C 12 36 32 22 52 22 C 72 22 90 34 88 54 C 74 66 30 68 16 56 Z" fill="url(#br-shell)" stroke={O} strokeWidth="3.6" strokeLinejoin="round" />
+        <path d="M22 52 C 20 38 36 28 52 28 C 68 28 84 38 82 52 C 68 60 34 60 22 52 Z" fill="none" stroke="#2e2616" strokeWidth="2.8" strokeLinejoin="round" opacity="0.85" />
+        <path d="M30 48 C 30 40 40 34 52 34 C 64 34 74 40 74 48 C 64 54 40 54 30 48 Z" fill="#8f7a4e" stroke={O} strokeWidth="2.6" strokeLinejoin="round" />
+        {/* rivet rows — each plate shrugs a needle */}
+        <g fill="#d8cfa8" stroke={O} strokeWidth="1.4">
+          <circle cx="38" cy="41" r="2.1" /><circle cx="52" cy="39" r="2.1" /><circle cx="66" cy="41" r="2.1" />
+          <circle cx="30" cy="50" r="1.9" /><circle cx="74" cy="50" r="1.9" />
+        </g>
+        {/* head + antennae below the shield rim */}
+        <path d="M20 58 C 12 58 8 64 10 70 C 16 72 24 68 24 62 Z" fill="#463821" stroke={O} strokeWidth="2.8" strokeLinejoin="round" />
+        <circle cx="16" cy="63" r="2.6" fill="#ffe07a" stroke={O} strokeWidth="1.5" />
+        <path d="M12 60 C 2 54 -2 44 2 36 M 16 58 C 8 48 8 38 14 30" stroke={O} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+        <path d="M2 36 l -3 -5 M 14 30 l 1 -6" stroke="#b09a6a" strokeWidth="2.4" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function BoulderToad() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible -scale-x-100">
+      <defs>
+        <radialGradient id="bt-hide" cx="0.42" cy="0.36" r="0.85">
+          <stop offset="0" stopColor="#a9a294" />
+          <stop offset="0.55" stopColor="#7a7365" />
+          <stop offset="1" stopColor="#4a4438" />
+        </radialGradient>
+      </defs>
+      <g className="anim-breathe-slow">
+        {/* planted thighs — this thing is not going anywhere */}
+        <path d="M18 74 C 10 74 6 80 10 86 C 20 90 34 88 40 82 L 38 72 Z" fill="#6b6250" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+        <path d="M84 74 C 92 74 96 80 92 86 C 82 90 68 88 62 82 L 64 72 Z" fill="#6b6250" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+        {/* boulder back */}
+        <path d="M14 72 C 8 50 24 30 50 28 C 76 26 92 44 90 68 C 90 78 76 84 50 84 C 28 84 14 80 14 72 Z" fill="url(#bt-hide)" stroke={O} strokeWidth="3.8" strokeLinejoin="round" />
+        {/* actual stone slabs grown onto it, with grit */}
+        <path d="M28 46 C 38 38 58 36 70 44 C 64 52 38 54 28 46 Z" fill="#8f8a7c" stroke={O} strokeWidth="2.4" strokeLinejoin="round" />
+        <path d="M40 58 C 52 52 70 52 80 60 C 70 66 50 66 40 58 Z" fill="#6b675c" stroke={O} strokeWidth="2.2" strokeLinejoin="round" />
+        <g fill="#3c382e" opacity="0.8">
+          <circle cx="34" cy="36" r="1.7" /><circle cx="78" cy="38" r="1.6" /><circle cx="58" cy="32" r="1.4" />
+        </g>
+        {/* toad eyes, unblinking */}
+        <path d="M26 34 C 24 26 30 20 38 22 C 42 28 40 34 34 38 Z" fill="#5f5a4a" stroke={O} strokeWidth="2.8" strokeLinejoin="round" />
+        <ellipse cx="33" cy="29" rx="4.4" ry="3.4" fill="#1a130c" stroke={O} strokeWidth="1.6" />
+        <circle cx="32" cy="29" r="1.7" fill="#ffb15e" />
+        {/* wide mouth welded shut under the slab line */}
+        <path d="M22 66 C 34 72 54 74 68 70" stroke={O} strokeWidth="3.2" fill="none" strokeLinecap="round" />
+        {/* a gust already slid off — scoured lines on the windward side */}
+        <path d="M86 50 C 90 54 91 60 89 66" stroke="#d8d2c0" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
+      </g>
+    </svg>
+  );
+}
+
+function IronNightstalker({ dashing, plated }: { dashing: boolean; plated: boolean }) {
+  return (
+    <svg viewBox="0 0 100 100" className={`h-full w-full overflow-visible -scale-x-100 ${dashing ? 'anim-cellshake' : ''}`}>
+      <defs>
+        <radialGradient id="ns-cap" cx="0.4" cy="0.3" r="0.8">
+          <stop offset="0" stopColor="#4e4a68" />
+          <stop offset="1" stopColor="#1c1a2e" />
+        </radialGradient>
+        <linearGradient id="ns-plate" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#cdd6de" />
+          <stop offset="1" stopColor="#5d6a78" />
+        </linearGradient>
+      </defs>
+      <g className={dashing ? undefined : 'anim-skitter'}>
+        {dashing && <path d="M96 30 L 66 30 M 98 46 L 72 46 M 94 62 L 68 62" stroke="#dfe6ff" strokeWidth="3" strokeLinecap="round" opacity="0.7" className="anim-twinkle" />}
+        <path d="M36 66 l -12 16 M 48 70 l -4 16 M 62 68 l 8 16 M 72 60 l 14 12" stroke={O} strokeWidth="3.4" strokeLinecap="round" className="anim-legs" />
+        <path d="M30 60 C 24 48 30 38 44 36 C 58 34 72 40 76 50 C 80 60 72 68 58 68 C 46 68 34 66 30 60 Z" fill="#33304e" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+        <path d="M14 40 C 14 20 34 8 54 10 C 72 12 82 26 78 40 C 60 32 32 32 14 40 Z" fill="url(#ns-cap)" stroke={O} strokeWidth="3.2" strokeLinejoin="round" />
+        {/* the bolt-on pauldron — eats the first hit of the dash */}
+        <g>
+          <path d="M60 34 C 74 32 84 40 84 52 C 76 56 66 54 62 48 C 66 42 64 37 60 34 Z" fill={plated ? 'url(#ns-plate)' : '#3c4550'} stroke={O} strokeWidth="2.8" strokeLinejoin="round" />
+          {plated && <path d="M66 38 L 78 44 M 65 45 L 76 50" stroke="#eef5ff" strokeWidth="2" strokeLinecap="round" opacity="0.9" />}
+          {plated && <path d="M60 20 C 84 24 92 44 86 62" fill="none" stroke="#cdd6de" strokeWidth="2.2" opacity="0.6" className="anim-pulse-ring" />}
+        </g>
+        <path d="M20 40 C 34 34 60 34 76 40 C 62 46 34 46 20 40 Z" fill="#100d1f" stroke={O} strokeWidth="2" />
+        <circle cx="30" cy="44" r="4.6" fill="#ff5d7c" className="anim-breathe" />
+        <circle cx="29" cy="43.4" r="1.8" fill="#fff" opacity="0.85" />
+        {/* clawed hand instead of a fungal blade — iron filings on the knuckles */}
+        <path d="M76 52 C 88 46 96 36 98 26" fill="none" stroke={O} strokeWidth="5" strokeLinecap="round" />
+        <path d="M98 26 l 2 -8 M 94 30 l 8 -5 M 90 34 l 7 3" stroke="#cdd6de" strokeWidth="2.6" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function WardshellGrub({ warded }: { warded: boolean }) {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible -scale-x-100">
+      <defs>
+        <radialGradient id="ws-body" cx="0.42" cy="0.38" r="0.75">
+          <stop offset="0" stopColor="#d9c2e8" />
+          <stop offset="0.6" stopColor="#b08cc4" />
+          <stop offset="1" stopColor="#7a5c92" />
+        </radialGradient>
+      </defs>
+      <g className="anim-lurch">
+        <path d="M30 72 l -4 8 M 42 76 l -2 8 M 58 76 l 3 8 M 70 70 l 6 7" stroke={O} strokeWidth="3.4" strokeLinecap="round" className="anim-legs" />
+        {/* plump shell-backed grub */}
+        <path d="M22 70 C 14 56 18 40 34 34 C 52 26 74 30 82 46 C 88 58 82 70 68 74 C 52 78 32 80 22 70 Z" fill="url(#ws-body)" stroke={O} strokeWidth="3.2" strokeLinejoin="round" />
+        <path d="M34 40 C 30 48 30 58 34 66 M 50 36 C 47 46 47 58 50 70 M 66 40 C 64 48 64 58 66 66" stroke="#5c3f70" strokeWidth="2.4" fill="none" strokeLinecap="round" opacity="0.7" />
+        {/* the surprise ward — a glass dome that only stops the first touch */}
+        {warded ? (
+          <g>
+            <path d="M16 62 C 10 40 28 22 52 22 C 76 22 94 38 90 60 C 68 70 34 72 16 62 Z" fill="rgba(216,180,255,0.16)" stroke="#d8b4ff" strokeWidth="2.6" strokeLinejoin="round" opacity="0.85" className="anim-breathe" />
+            <path d="M26 34 C 34 26 46 22 56 22" stroke="#f0e2ff" strokeWidth="2.6" fill="none" strokeLinecap="round" opacity="0.9" />
+            <g className="anim-twinkle" fill="#d8b4ff">
+              <circle cx="22" cy="50" r="1.8" />
+              <circle cx="78" cy="36" r="1.6" />
+              <circle cx="62" cy="66" r="1.5" />
+            </g>
+          </g>
+        ) : (
+          /* spent dome: a cracked ring, re-arming at the next tile */
+          <path d="M18 58 C 14 44 26 30 44 26" fill="none" stroke="#d8b4ff" strokeWidth="2" strokeDasharray="6 8" opacity="0.4" />
+        )}
+        {/* head + eyes */}
+        <path d="M20 52 C 12 48 8 40 12 32 C 18 34 24 40 24 48 Z" fill="#8a6aa8" stroke={O} strokeWidth="2.6" />
+        <circle cx="16" cy="40" r="3.4" fill="#f3ecff" stroke={O} strokeWidth="1.8" />
+        <circle cx="15.4" cy="40.4" r="1.6" fill="#2a1040" />
+      </g>
+    </svg>
+  );
+}
+
 function HollowKing({ phase, immune }: { phase: number; immune: boolean }) {
   const rage = phase >= 3;
   const glow = rage ? '#ff3d3d' : immune ? '#7fd4ff' : '#d8a8ff';
@@ -1488,6 +1708,9 @@ export function EnemySprite({
   shieldFrac = 0,
   dashing = false,
   warded = false,
+  regrowing = false,
+  plated = false,
+  domed = false,
 }: {
   k: EnemyKey;
   shellFrac?: number;
@@ -1500,6 +1723,10 @@ export function EnemySprite({
   shieldFrac?: number; // Grovemaw Slug: how much damage reduction it is holding
   dashing?: boolean; // Nightcap Assassin: mid-sprint
   warded?: boolean; // Hollow King: a damage channel is currently shut off
+  // ── Enemy Batch 3 ──
+  regrowing?: boolean; // Regrowth Husk: the knit is close to closing the wound
+  plated?: boolean; // Iron Nightstalker: the plate is up — the next hit is eaten
+  domed?: boolean; // Wardshell Grub: the surprise ward is standing in this tile
 }) {
   switch (k) {
     case 'gnat': return <Gnat />;
@@ -1523,6 +1750,13 @@ export function EnemySprite({
     case 'nightcap': return <NightcapAssassin dashing={dashing} />;
     case 'wretch': return <FenWretch />;
     case 'hollowking': return <HollowKing phase={phase} immune={warded} />;
+    // ── Enemy Batch 3 ──
+    case 'regrow': return <RegrowthHusk regrowing={regrowing} />;
+    case 'golem': return <CinderGolem />;
+    case 'roach': return <BulwarkRoach />;
+    case 'toad': return <BoulderToad />;
+    case 'nightstalker': return <IronNightstalker dashing={dashing} plated={plated} />;
+    case 'wardshell': return <WardshellGrub warded={domed} />;
   }
 }
 

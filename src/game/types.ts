@@ -51,7 +51,17 @@ export type EnemyKey =
   | 'marauder' // root-immune — Bindweed Snare finds nothing to hold
   | 'nightcap' // sprints past the front two Flora to burst a back-row plant
   | 'wretch' // lane-wide aura: Nectar plants ripen at half rate
-  | 'hollowking'; // world boss — three phases, and a damage type that switches off
+  | 'hollowking' // world boss — three phases, and a damage type that switches off
+  // ── Batch 3: The Hollow Reckoning — each one spends a Flora Batch 2 gimmick ──
+  | 'regrow' // Regrowth Husk: knits back HP every 2s it goes unhit
+  | 'golem' // Cinder Golem: swallows half of every burn/fire hit
+  | 'roach' // Bulwark Roach: single hits under 10 raw damage floor to 1
+  | 'toad' // Boulder Toad: immune to knockback and displacement
+  | 'nightstalker' // Iron Nightstalker: dash past the line, plate eats the first hit, retreats
+  | 'wardshell'; // Wardshell Grub: first hit inside each new tile deals nothing
+
+/** Which of the four campaign worlds a level lives in (Batch 3 extends to 5). */
+export type WorldId = 1 | 2 | 3 | 4 | 5;
 
 /**
  * The damage channels a hit can arrive on. The Hollow King's phase-2 immunity
@@ -100,6 +110,7 @@ export interface FloraStats {
     sprayTargets?: number; // …spread across at most this many enemies in the lane
     altKind?: boolean; // Prism Bud: alternates physical ↔ splash every other shot
     knockback?: number; // Gale Fern: tiles of displacement on hit
+    fire?: boolean; // burn/fire source — the Cinder Golem swallows half of it (Prism Bud's fire half is fire automatically)
   };
   produce?: { amount: number; interval: number; boost?: boolean }; // boost: Nectar Lotus tray rebate
   // ── Flora Batch 1 special rules ──
@@ -145,6 +156,15 @@ export interface EnemyStats {
   nectarDrain?: number; // Fen Wretch: lane-wide multiplier applied to Nectar plant output
   enrageFrac?: number; // Hollow King: HP fraction that triggers the enrage
   immuneCycle?: { on: number; off: number }; // Hollow King: seconds immune / seconds open
+  // ── Batch 3 special rules: THE HOLLOW RECKONING ──
+  regrowHp?: number; // Regrowth Husk: HP knitted back …
+  regrowEvery?: number; // …every N seconds it has not taken a hit
+  fireResist?: number; // Cinder Golem: fraction of burn/fire damage the shell swallows
+  hitFloor?: number; // Bulwark Roach: a single hit below this raw damage lands for 1
+  knockImmune?: boolean; // Boulder Toad: displacement effects simply do not apply
+  dashShield?: boolean; // Iron Nightstalker: a plate eats the first hit of every dash
+  retreatAfterDash?: number; // …and after the burst it bounds this many tiles back east to re-arm
+  tileWard?: boolean; // Wardshell Grub: the first hit taken inside each new tile deals nothing
   desc: string;
   counter: string;
 }
@@ -163,8 +183,8 @@ export interface WaveDef {
 }
 
 export interface LevelDef {
-  id: number; // 0..14 global
-  world: 1 | 2 | 3 | 4;
+  id: number; // 0..24 global
+  world: WorldId;
   idx: number; // 1..5 within world
   name: string;
   blurb: string;
@@ -245,6 +265,12 @@ export interface EnemyEnt {
   immuneOn: boolean; // …true while the window is an immunity, false in the gap
   immuneIdx: number; // …which channel comes next (alternates every window)
   enraged: boolean; // Hollow King phase 3: double attack speed, double damage taken
+  // ── Enemy Batch 3 mechanics ──
+  regrowT: number; // Regrowth Husk: seconds since the last hit landed — at 2s the knit closes
+  shieldUp: boolean; // Iron Nightstalker: the plate is armed — the next hit of this dash is eaten
+  retreatTo: number; // …x it is bounding back east to after a burst (-1 = not repositioning)
+  wardUp: boolean; // Wardshell Grub: the surprise ward is armed for the tile it stands in
+  wardCol: number; // …the tile that current ward was armed for
 }
 
 export interface Proj {
@@ -271,6 +297,8 @@ export interface Proj {
   poisonDps: number; // DoT applied on hit (dormant — no Flora produces it yet)
   poisonDur: number;
   knockback: number; // Gale Fern: tiles this hit shoves the victim back
+  // ── Enemy Batch 3 ──
+  fire: boolean; // burn/fire hit — the Cinder Golem drinks half of it
 }
 
 // Enemy-fired ordnance (Locust Ranger thorn spines) — hunts one Flora.
@@ -327,7 +355,14 @@ export interface Fx {
     // ── Flora Batch 2 ──
     | 'riposte' // Sentinel Bloom counter-striking a sprint or a leap
     | 'ambush' // Ambush Fern springing
-    | 'gale'; // Gale Fern gust shoving something backwards
+    | 'gale' // Gale Fern gust shoving something backwards
+    // ── Enemy Batch 3 ──
+    | 'regrow' // Regrowth Husk knitting an open wound shut
+    | 'resist' // Cinder Golem swallowing the burn
+    | 'graze' // a hit under the Bulwark Roach's floor skitters off
+    | 'anchor' // Boulder Toad refusing to be displaced
+    | 'plate' // Iron Nightstalker's shield eating a hit — or being raised with a dash
+    | 'shroud' // Wardshell Grub's surprise ward fizzling the first hit in a tile
   lane: number;
   x: number; // col units (or grid-relative)
   ttl: number;
