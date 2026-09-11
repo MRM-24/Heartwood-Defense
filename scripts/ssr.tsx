@@ -331,6 +331,15 @@ check('Hud(compact top strip)', () =>
     ['Game speed, currently 2 times', 'PAUSE', 'nectar', 'Wave progress'],
   ),
 );
+check('Hud(compact rail — landscape phone tray)', () =>
+  assert(
+    'hud-compact-rail',
+    renderToString(
+      <Hud s={s} speed={1} muted compact part="rail" interactive onSelect={() => {}} onShovel={() => {}} onSpeed={() => {}} onPause={() => {}} onMute={() => {}} />,
+    ),
+    ['READY', 'DIG UP'],
+  ),
+);
 check('Hud(compact — placement hint)', () => {
   const selected = s.selected;
   s.selected = 'thornvine';
