@@ -5,7 +5,7 @@ import Board from '../src/components/Board';
 import Hud from '../src/components/Hud';
 import { GuideModal, LevelSelect, LoadoutScreen, LoseOverlay, PauseOverlay, TitleScreen, WinOverlay, WorldSelect } from '../src/components/Screens';
 import { createGame, placeFlora, spawnEnemy, stepGame } from '../src/game/engine';
-import { LEVELS, unlockedFloraFor } from '../src/game/data';
+import { LEVELS, defaultLoadoutFor } from '../src/game/data';
 import type { EnemyKey } from '../src/game/types';
 
 let count = 0;
@@ -26,21 +26,29 @@ check('TitleScreen', () => renderToString(<TitleScreen hasSave onPlay={() => {}}
 check('GuideModal', () => renderToString(<GuideModal onClose={() => {}} />));
 check('WorldSelect', () => renderToString(<WorldSelect maxLevel={3} stars={{ 0: 3, 1: 2 }} onPick={() => {}} onBack={() => {}} />));
 check('LevelSelect w2', () => renderToString(<LevelSelect world={2} maxLevel={8} stars={{}} onPick={() => {}} onBack={() => {}} />));
-check('LoadoutScreen', () => renderToString(<LoadoutScreen level={LEVELS[6]} picked={unlockedFloraFor(6)} setPicked={() => {}} onStart={() => {}} onBack={() => {}} />));
+check('LoadoutScreen', () => renderToString(<LoadoutScreen level={LEVELS[6]} picked={defaultLoadoutFor(LEVELS[6])} setPicked={() => {}} onStart={() => {}} onBack={() => {}} />));
 check('PauseOverlay', () => renderToString(<PauseOverlay onResume={() => {}} onRestart={() => {}} onQuit={() => {}} />));
 check('WinOverlay', () => renderToString(<WinOverlay stars={3} isLast={false} onNext={() => {}} onReplay={() => {}} onMap={() => {}} />));
 check('LoseOverlay', () => renderToString(<LoseOverlay lane={2} onRetry={() => {}} onMap={() => {}} />));
 
 // live combat board with everything on screen
 const level = LEVELS[9]; // colossus level
-const s = createGame(level, unlockedFloraFor(9));
-s.nectar = 500;
+const s = createGame(level, defaultLoadoutFor(level));
+s.nectar = 1500;
 placeFlora(s, 'thornvine', 1, 2);
 placeFlora(s, 'glowbulb', 0, 0);
 placeFlora(s, 'bramble', 2, 5);
 placeFlora(s, 'cactus', 3, 1);
 placeFlora(s, 'frostcap', 4, 1);
 placeFlora(s, 'sentinel', 2, 2);
+// Flora Batch 1 — every new sprite on one board
+placeFlora(s, 'cinderpod', 0, 3);
+placeFlora(s, 'deeproot', 1, 4);
+placeFlora(s, 'bulwark', 3, 5);
+placeFlora(s, 'snaptrap', 4, 4);
+placeFlora(s, 'watchvine', 0, 1);
+placeFlora(s, 'bindweed', 1, 5);
+placeFlora(s, 'lotus', 3, 0);
 (['gnat', 'beetle', 'skitter', 'warden', 'drifter', 'brute', 'colossus'] as EnemyKey[]).forEach((k, i) => {
   const e = spawnEnemy(s, k, i % 5, 4 + (i % 4));
   if (k === 'colossus') e.hp = e.maxHp * 0.4; // phase visuals

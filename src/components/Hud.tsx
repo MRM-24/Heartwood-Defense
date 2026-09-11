@@ -42,7 +42,13 @@ export default function Hud({ s, speed, muted, onSelect, onShovel, onSpeed, onPa
           <div className="mt-1.5 h-[5px] w-[88px] overflow-hidden rounded-full bg-[#0a140f]">
             <div className="h-full rounded-full bg-[#a87c2a]" style={{ width: `${incomeFrac * 100}%` }} />
           </div>
-          <span className="mt-1 font-ui text-[11px] font-semibold tracking-wide text-[#9db08f]">+25 NEXT DROP</span>
+          {s.lotusT > 0 ? (
+            <span className="mt-1 animate-pulse font-ui text-[11px] font-extrabold tracking-wide text-[#ffd7ef]">
+              LOTUS REBATE −1s · {s.lotusT.toFixed(1)}s
+            </span>
+          ) : (
+            <span className="mt-1 font-ui text-[11px] font-semibold tracking-wide text-[#9db08f]">+25 NEXT DROP</span>
+          )}
         </div>
       </div>
 

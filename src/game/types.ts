@@ -10,7 +10,15 @@ export type FloraKey =
   | 'bramble'
   | 'cactus'
   | 'frostcap'
-  | 'sentinel';
+  | 'sentinel'
+  // ── Flora Batch 1: answers to the Rootbound Depths ──
+  | 'cinderpod' // explosive in-lane splash — cracks Stoneback slabs
+  | 'deeproot' // underground battery — the only plant that sees a burrowed Tunnel Larva
+  | 'bulwark' // wall with reach — swallows Locust Ranger spines
+  | 'snaptrap' // passive maw — devours anything under 100 HP that enters its tile
+  | 'watchvine' // rearguard shooter — always hits the enemy furthest along the lane
+  | 'bindweed' // root control — immobilises one enemy per cast, no damage
+  | 'lotus'; // economy — +40 Nectar and a tray-cooldown rebate
 
 export type EnemyKey =
   | 'gnat'
@@ -45,8 +53,17 @@ export interface FloraStats {
     slowPct?: number;
     slowDur?: number;
     aoe?: boolean; // splash source — the only thing that cracks a Stoneback Grub's slab
+    // ── Flora Batch 1 ──
+    splash?: number; // Cinderpod: blast radius in columns around the impact (real AoE)
+    underground?: boolean; // Deeproot Sentry: may target & strike a burrowed Tunnel Larva
+    rearmost?: boolean; // Watchvine / Bindweed: ignores facing — always picks the enemy furthest along the lane
+    rootDur?: number; // Bindweed Snare: full immobilise duration (no damage)
+    quiet?: boolean; // the shot deals no damage — don't spam hit fx on big bodies
   };
-  produce?: { amount: number; interval: number };
+  produce?: { amount: number; interval: number; boost?: boolean }; // boost: Nectar Lotus tray rebate
+  // ── Flora Batch 1 special rules ──
+  reach?: boolean; // Bulwark Bramble: absorbs Locust Ranger spines crossing (or aimed past) its tile
+  snapKill?: number; // Snaptrap Root: instant kill threshold for enemies entering its tile
 }
 
 export interface EnemyStats {
@@ -147,6 +164,8 @@ export interface EnemyEnt {
   carrying: FloraEnt | null; // Root Thief: uprooted Flora being hauled away
   carrySpd: number; // Root Thief: flee speed toward the right edge
   stunT: number; // Spore Imp: landing recovery (no move / no bite)
+  // ── Flora Batch 1 mechanics ──
+  rootUntil: number; // Bindweed Snare: fully immobilised until this time (no move, no bite, no wind-up)
 }
 
 export interface Proj {
@@ -160,8 +179,14 @@ export interface Proj {
   aoe: boolean; // splash source — cracks Stoneback Grub slabs
   slowPct: number;
   slowDur: number;
-  kind: 'thorn' | 'spike' | 'frost' | 'ray';
+  kind: 'thorn' | 'spike' | 'frost' | 'ray' | 'cinder' | 'root' | 'bind';
   hitIds: Set<number>; // pierce: enemies already struck
+  // ── Flora Batch 1 ──
+  dir: 1 | -1; // travel direction (Watchvine / Bindweed can fire backwards)
+  splash: number; // blast radius in columns (0 = single target)
+  underground: boolean; // travels beneath the surface — can strike a burrowed enemy
+  rootDur: number; // 0 = no root; otherwise seconds of immobilise on hit
+  targetId?: number; // locked-on shot: only this enemy can be struck
 }
 
 // Enemy-fired ordnance (Locust Ranger thorn spines) — hunts one Flora.
@@ -199,7 +224,14 @@ export interface Fx {
     | 'shieldbreak' // Stoneback Grub slab shattering
     | 'deflect' // single-target ping off a Stoneback slab
     | 'cata' // Spore Imp incoming — tile telegraph
-    | 'land'; // Spore Imp impact
+    | 'land' // Spore Imp impact
+    // ── Flora Batch 1 ──
+    | 'boom' // Cinderpod detonation
+    | 'snap' // Snaptrap Root swallowing something small
+    | 'root' // Bindweed Snare pinning an enemy
+    | 'absorb' // Bulwark Bramble drinking a Locust spine
+    | 'lotus' // Nectar Lotus tray rebate spark
+    | 'under'; // Deeproot Sentry round breaking ground
   lane: number;
   x: number; // col units (or grid-relative)
   ttl: number;
@@ -250,4 +282,5 @@ export interface GameState {
   rngState: number;
   placedCount: number;
   bossKey: EnemyKey | null;
+  lotusT: number; // Nectar Lotus rebate window remaining (seconds)
 }

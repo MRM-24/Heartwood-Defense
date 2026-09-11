@@ -10,8 +10,9 @@ binary assets**.
 
 - **3 worlds, 15 levels** — *Verdant Vale* teaches the basics; *Frostmire Hollow*
   throws flying, armored, splitting, and boss enemies at you; *Rootbound Depths*
-  debuts **Batch 1**: seven new Blightspawn built to punish lazy strategies.
-- **6 Flora, 14 enemies** — each with distinct roles, counters, and attack patterns.
+  debuts **Batch 1**: seven new Blightspawn built to punish lazy strategies — and
+  seven new Flora built to answer them.
+- **13 Flora, 14 Blightspawn** — each with distinct roles, counters, and attack patterns.
 - **Loadout system** — pick up to 6 Flora before each level; unlocks grow as you win.
 - **Root Snares** — one emergency snare per lane that roots the first enemy to cross
   it. Finish a level with snares in the ground to earn up to ★★★.
@@ -32,6 +33,13 @@ binary assets**.
 | Spitting Cactus | 100 | Pierce | Spike volley hits *every* enemy in its lane. |
 | Frostcap Mushroom | 100 | Control | Chilled spores slow targets by 40% for 3s. |
 | Sunflower Sentinel | 175 | Anti-Air | The only Flora that can strike flying enemies. |
+| **Cinderpod** | 125 | Splash | Explosive seed every 2.5s: 25 dmg to the target *and* everything in the adjacent tile. Real area damage — the reliable way through a Stoneback's slab. |
+| **Deeproot Sentry** | 150 | Burrow Guard | Fires underground every 2s for 16 dmg at anything tunnelling through its lane — the only Flora that can touch a burrowed Tunnel Larva. Above ground it is just a slow single-target shooter. |
+| **Bulwark Bramble** | 100 | Shield Wall | A 350 HP wall with reach: Locust Ranger spines that cross its tile are snatched out of the air instead of landing on the Flora behind it. |
+| **Snaptrap Root** | 175 | Trap | Passive jaws, no cooldown between bites: instantly swallows any Blightspawn below 100 HP that enters its tile. Zero damage above that threshold, and a stone slab is too hard to bite. |
+| **Watchvine** | 150 | Rearguard | Plantable in any tile, front or back. Always strikes the Blightspawn furthest along its lane — even one that has slipped behind it. 20 dmg every 1.5s. |
+| **Bindweed Snare** | 125 | Control | Every 4s it pins the leading foe for 3s: no damage, total immobilise, and a winding-up Gargant Husk loses its smash entirely. |
+| **Nectar Lotus** | 100 | Economy | Ripens +40 Nectar every 15s; each harvest also rebates 1s off the recharge of the next Flora you plant within 5s. |
 
 ## 👾 The Blightspawn
 
@@ -56,6 +64,15 @@ binary assets**.
 opposite directions (splash vs burst). Tunnel Larva, Locust Ranger, and Spore Imp
 all punish "one wall in front, everything stacked behind it." Gargant Husk and
 Root Thief are "answer me now or lose something" spikes beyond raw HP totals.
+
+**Flora Batch 1 design notes** — every new plant answers something specific in
+that roster rather than adding raw damage: **Cinderpod** cracks the slabs that
+shrug off single-target fire; **Deeproot Sentry** is the only way to touch a
+burrowed Tunnel Larva; **Bulwark Bramble** intercepts Locust Ranger spines;
+**Watchvine** and **Snaptrap Root** punish Spore Imps and Root Thieves that get
+behind the wall; **Bindweed Snare** roots a Gargant Husk that no HP total can
+tank; and **Nectar Lotus** snowballs an aggressive opening. Batch 1 Flora unlock
+across World 3 (levels 11–14).
 
 ## 🎮 Controls
 

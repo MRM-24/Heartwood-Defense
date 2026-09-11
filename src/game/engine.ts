@@ -14,6 +14,7 @@ import {
   type Fx,
   type GameState,
   type LevelDef,
+  type Proj,
 } from './types';
 
 const PROJ_SPEED = 4.6;
@@ -24,6 +25,9 @@ const JUMP_TIME = 0.45; // Mite Vaulter leap duration
 const IMP_STUN = 0.8; // Spore Imp landing recovery
 const CATAPULT_WARN = 1.6; // seconds of telegraph before an imp lands
 const THIEF_EXIT_X = COLS + 0.55; // off-board with the loot
+const LOTUS_WINDOW = 5; // Nectar Lotus: seconds to spend the tray rebate
+const LOTUS_REBATE = 1; // …worth this many seconds off the next recharge
+const SNAP_REACH = 1.15; // Snaptrap: how far past its tile edge the jaws close
 
 // Deterministic RNG (mulberry32) — state lives on the GameState so the whole
 // simulation is reproducible from (level, loadout, seed).
@@ -73,6 +77,7 @@ export function createGame(level: LevelDef, loadout: FloraKey[], seed?: number):
     rngState: (seed ?? level.id * 7919 + 1337) >>> 0,
     placedCount: 0,
     bossKey: level.boss ?? null,
+    lotusT: 0,
   };
   for (const k of loadout) s.trayCd[k] = 0;
 
@@ -143,6 +148,7 @@ export function spawnEnemy(s: GameState, type: EnemyKey, lane: number, x = SPAWN
     carrying: null,
     carrySpd: 0,
     stunT: catapulted ? IMP_STUN : 0,
+    rootUntil: 0,
   };
   s.enemies.push(e);
   if (catapulted) {
@@ -166,7 +172,15 @@ export function placeFlora(s: GameState, key: FloraKey, lane: number, col: numbe
   if (nectarShort(s, key)) return 'poor';
   if ((s.trayCd[key] ?? 0) > 0) return 'cooldown';
   s.nectar -= def.cost;
-  s.trayCd[key] = def.recharge;
+  // Nectar Lotus rebate: the next Flora planted inside the harvest window
+  // recharges 1s faster, and spending it closes the window.
+  const rebate = s.lotusT > 0 ? LOTUS_REBATE : 0;
+  s.trayCd[key] = Math.max(0, def.recharge - rebate);
+  if (rebate > 0) {
+    s.lotusT = 0;
+    pushFx(s, 'lotus', lane, col + 0.5, 0.7);
+    s.events.push('lotus');
+  }
   const f: FloraEnt = {
     id: s.nextId++,
     key,
@@ -284,12 +298,15 @@ function killEnemy(s: GameState, e: EnemyEnt, quiet = false) {
 
 function findTarget(s: GameState, f: FloraEnt): EnemyEnt | null {
   const atk = FLORA[f.key].attack!;
+  // Watchvine / Bindweed Snare ignore facing entirely: they always pick the
+  // enemy furthest along the lane — even one that has slipped behind them.
+  const rearmost = !!atk.rearmost;
   let bestFlyer: EnemyEnt | null = null;
   let bestGround: EnemyEnt | null = null;
   for (const e of s.enemies) {
     if (e.lane !== f.lane) continue;
-    if (e.burrowed) continue; // Tunnel Larva: underground and untargetable
-    if (e.x - FRONT_OFF <= f.col + 0.1) continue; // already at/behind the plant
+    if (e.burrowed && !atk.underground) continue; // Tunnel Larva: untargetable underground (Deeproot Sentry excepted)
+    if (!rearmost && e.x - FRONT_OFF <= f.col + 0.1) continue; // already at/behind the plant
     if (e.x > COLS + 0.6) continue; // hasn't entered the board
     if (isFlying(e)) {
       if (!atk.fly) continue;
@@ -303,18 +320,30 @@ function findTarget(s: GameState, f: FloraEnt): EnemyEnt | null {
   return bestGround;
 }
 
-function fireProjectile(s: GameState, f: FloraEnt) {
+function projectileKind(f: FloraEnt, target: EnemyEnt): Proj['kind'] {
+  if (f.key === 'cinderpod') return 'cinder';
+  if (f.key === 'bindweed') return 'bind';
+  if (f.key === 'deeproot' && target.burrowed) return 'root';
+  if (f.key === 'thornvine' || f.key === 'deeproot' || f.key === 'watchvine') return 'thorn';
+  if (f.key === 'cactus') return 'spike';
+  if (f.key === 'frostcap') return 'frost';
+  return 'ray';
+}
+
+function fireProjectile(s: GameState, f: FloraEnt, target: EnemyEnt) {
   const atk = FLORA[f.key].attack!;
-  const kind =
-    f.key === 'thornvine' ? 'thorn'
-    : f.key === 'cactus' ? 'spike'
-    : f.key === 'frostcap' ? 'frost'
-    : 'ray';
+  const kind = projectileKind(f, target);
+  // A rearguard shot may travel west; everything else fires east.
+  const dir: 1 | -1 = target.x < f.col + 0.5 ? -1 : 1;
+  const x = f.col + (dir === 1 ? 0.75 : 0.25);
+  const underground = !!atk.underground && target.burrowed;
+  // Locked shots fly past every other Blightspawn to reach their chosen victim.
+  const locked = !!atk.rearmost || underground;
   s.projs.push({
     id: s.nextId++,
     lane: f.lane,
-    x: f.col + 0.75,
-    prevX: f.col + 0.75,
+    x,
+    prevX: x,
     dmg: atk.dmg,
     pierce: !!atk.pierce,
     fly: !!atk.fly,
@@ -323,9 +352,43 @@ function fireProjectile(s: GameState, f: FloraEnt) {
     slowDur: atk.slowDur ?? 0,
     kind,
     hitIds: new Set(),
+    dir,
+    splash: atk.splash ?? 0,
+    underground,
+    rootDur: atk.rootDur ?? 0,
+    targetId: locked ? target.id : undefined,
   });
   f.fired = 0.16;
   s.events.push(kind === 'thorn' ? 'shoot' : kind);
+}
+
+/** Bindweed Snare: pin an enemy where it stands — no damage, no walking, no biting. */
+function rootEnemy(s: GameState, e: EnemyEnt, dur: number) {
+  if (e.hp <= 0 || e.burrowed || isFlying(e)) return;
+  const fresh = e.rootUntil <= s.t;
+  e.rootUntil = Math.max(e.rootUntil, s.t + dur);
+  // A Gargant Husk yanked off its feet loses the whole wind-up and must start over.
+  if (ENEMIES[e.key].smashWindup && e.windup > 0) {
+    e.windup = 0;
+    s.events.push('interrupt');
+  }
+  if (fresh) {
+    pushFx(s, 'root', e.lane, e.x, 0.8);
+    s.events.push('bind');
+  }
+}
+
+/** Damage a Flora tile directly (enemy spines, splashes). */
+function hurtFlora(s: GameState, lane: number, col: number, dmg: number) {
+  const f = s.grid[lane]?.[col];
+  if (!f) return;
+  f.hp -= dmg;
+  f.flash = 0.2;
+  if (f.hp <= 0) {
+    s.grid[lane][col] = null;
+    pushFx(s, 'sporeburst', lane, col + 0.5, 0.5);
+    s.events.push('plantdie');
+  }
 }
 
 // ─── Main step ──────────────────────────────────────────────────────────────
@@ -395,6 +458,12 @@ export function stepGame(s: GameState) {
           f.prod = 0.7;
           pushFx(s, 'nectar', l, c + 0.5, 1.0, `+${def.produce.amount}`);
           s.events.push('produce');
+          if (def.produce.boost) {
+            // Nectar Lotus: opens a short window for a cheaper next planting.
+            s.lotusT = LOTUS_WINDOW;
+            pushFx(s, 'lotus', l, c + 0.5, 0.8);
+            s.events.push('lotus');
+          }
         }
       }
       if (def.attack) {
@@ -403,7 +472,7 @@ export function stepGame(s: GameState) {
           f.atkT -= TICK;
           if (f.atkT <= 0) {
             f.atkT += def.attack.interval;
-            fireProjectile(s, f);
+            fireProjectile(s, f, target);
           }
         } else {
           // stay at most half-charged while idle (no full latch)
@@ -438,6 +507,13 @@ export function stepGame(s: GameState) {
           pushFx(s, 'dirt', l, e.x, 0.45);
           s.events.push('vault');
         }
+        continue;
+      }
+
+      // ── Bindweed Snare: rooted solid — no walking, no biting, no leaps,
+      // and a Gargant Husk's wind-up is frozen out entirely
+      if (e.rootUntil > s.t) {
+        e.chewing = false;
         continue;
       }
 
@@ -618,6 +694,31 @@ export function stepGame(s: GameState) {
     }
   }
 
+  // ── Snaptrap Roots: passive jaws, no cooldown between bites — but the
+  // threshold is absolute. Anything small enough that is inside the trap's tile
+  // is swallowed whole; anything bigger is not damaged at all.
+  // Runs after movement so a leap or a catapult landing has already resolved.
+  for (let l = 0; l < LANES; l++) {
+    for (let c = 0; c < COLS; c++) {
+      const f = s.grid[l][c];
+      if (!f) continue;
+      const threshold = FLORA[f.key].snapKill;
+      if (!threshold) continue;
+      for (const e of [...s.enemies]) {
+        const def = ENEMIES[e.key];
+        if (e.lane !== l || e.hp <= 0 || e.hp >= threshold) continue;
+        if (def.flying || e.burrowed || e.jumpT > 0) continue; // sky, soil, and mid-leap are all safe
+        if (def.vault && !e.vaulted) continue; // coiled to spring — the jaws close on nothing
+        if (e.maxStone > 0 && e.stone > 0) continue; // stone is too hard to bite through
+        if (e.x - FRONT_OFF > c + SNAP_REACH) continue; // hasn't reached the jaws yet
+        if (e.x < c + 0.2) continue; // already slipped past the tile
+        killEnemy(s, e);
+        pushFx(s, 'snap', l, e.x, 0.55);
+        s.events.push('snap');
+      }
+    }
+  }
+
   // ── Root Snare / defeat ──
   for (const e of [...s.enemies]) {
     if (e.x - FRONT_OFF > SNARE_LINE) continue;
@@ -668,40 +769,65 @@ export function stepGame(s: GameState) {
   // ── Projectiles ──
   for (let i = s.projs.length - 1; i >= 0; i--) {
     const p = s.projs[i];
+    // a locked-on shot whose victim is already gone simply buries itself
+    if (p.targetId !== undefined && !s.enemies.some((e) => e.id === p.targetId)) {
+      s.projs.splice(i, 1);
+      continue;
+    }
     p.prevX = p.x;
-    p.x += PROJ_SPEED * TICK;
+    p.x += PROJ_SPEED * p.dir * TICK;
     const lo = Math.min(p.prevX, p.x) - 0.2;
     const hi = Math.max(p.prevX, p.x) + 0.2;
+    const inSweep = (e: EnemyEnt) => e.x + 0.3 >= lo && e.x - FRONT_OFF <= hi;
+    const canHit = (e: EnemyEnt) => {
+      if (e.lane !== p.lane || e.hp <= 0) return false;
+      if (e.burrowed && !p.underground) return false; // passes harmlessly over a Tunnel Larva
+      if (isFlying(e) && !p.fly) return false;
+      if (p.targetId !== undefined && e.id !== p.targetId) return false; // locked onto one victim
+      return true;
+    };
+    const strike = (e: EnemyEnt) => {
+      if (p.dmg > 0) damageEnemy(s, e, p.dmg, p.slowPct, p.slowDur, p.aoe);
+      if (p.rootDur > 0) rootEnemy(s, e, p.rootDur);
+    };
     let hitSomething = false;
     if (p.pierce) {
       for (const e of [...s.enemies]) {
-        if (e.lane !== p.lane || p.hitIds.has(e.id)) continue;
-        if (e.burrowed) continue; // passes harmlessly over a Tunnel Larva
-        if (isFlying(e) && !p.fly) continue;
-        if (e.x + 0.3 >= lo && e.x - FRONT_OFF <= hi) {
-          p.hitIds.add(e.id);
-          damageEnemy(s, e, p.dmg, p.slowPct, p.slowDur, p.aoe);
-          s.events.push('hit');
-        }
+        if (p.hitIds.has(e.id) || !inSweep(e) || !canHit(e)) continue;
+        p.hitIds.add(e.id);
+        strike(e);
+        s.events.push('hit');
       }
     } else {
       let best: EnemyEnt | null = null;
-      for (const e of s.enemies) {
-        if (e.lane !== p.lane) continue;
-        if (e.burrowed) continue;
-        if (isFlying(e) && !p.fly) continue;
-        if (e.x + 0.3 >= lo && e.x - FRONT_OFF <= hi) {
-          if (!best || e.x < best.x) best = e;
-        }
+      for (const e of [...s.enemies]) {
+        if (!inSweep(e) || !canHit(e)) continue;
+        if (!best || e.x < best.x) best = e;
       }
       if (best) {
-        if (p.kind === 'frost') pushFx(s, 'splash', p.lane, best.x, 0.4);
-        damageEnemy(s, best, p.dmg, p.slowPct, p.slowDur, p.aoe);
-        s.events.push('hit');
+        if (p.splash > 0) {
+          // ── Cinderpod: a real blast — the victim's tile AND the one beside it
+          const cx = best.x;
+          strike(best); // the victim takes the hit too, slab and all
+          for (const o of [...s.enemies]) {
+            if (o.id === best.id || o.burrowed) continue;
+            if (!canHit(o) || Math.abs(o.x - cx) > p.splash) continue;
+            strike(o);
+            s.events.push('hit');
+          }
+          pushFx(s, 'boom', p.lane, cx, 0.55);
+          s.shake = Math.max(s.shake, 0.22);
+          s.events.push('boom');
+        } else {
+          if (p.kind === 'frost') pushFx(s, 'splash', p.lane, best.x, 0.4);
+          if (p.kind === 'root') pushFx(s, 'under', p.lane, best.x, 0.5);
+          strike(best);
+          s.events.push('hit');
+        }
         hitSomething = true;
       }
     }
-    if (hitSomething || p.x > COLS + 0.8) s.projs.splice(i, 1);
+    if (hitSomething || p.x > COLS + 0.8 || p.x < -0.8) s.projs.splice(i, 1);
   }
 
   // ── Enemy spines (Locust Ranger) ──
@@ -709,17 +835,27 @@ export function stepGame(s: GameState) {
     const p = s.eprojs[i];
     p.prevX = p.x;
     p.x -= EPROJ_SPEED * TICK;
-    if (p.x <= p.col + 0.92) {
+    // ── Bulwark Bramble's reach: its outer boughs snatch spines out of the air.
+    // Any Locust spine that crosses the wall's tile is drunk by the wall instead
+    // of whatever it was aimed at — including Flora further down the lane.
+    let absorbed = false;
+    for (let c = COLS - 1; c >= 0 && !absorbed; c--) {
+      const w = s.grid[p.lane][c];
+      if (!w || !FLORA[w.key].reach) continue;
+      if (w.id === p.targetId) continue; // spine was aimed at this very wall — handled below
+      if (p.x > c + 0.92) continue; // hasn't crossed the wall's tile yet
+      hurtFlora(s, p.lane, c, p.dmg);
+      pushFx(s, 'absorb', p.lane, c + 0.5, 0.45);
+      s.events.push('absorb');
+      absorbed = true;
+    }
+    if (absorbed) {
+      s.eprojs.splice(i, 1);
+    } else if (p.x <= p.col + 0.92) {
       const f = s.grid[p.lane]?.[p.col];
       if (f && f.id === p.targetId) {
-        f.hp -= p.dmg;
-        f.flash = 0.2;
+        hurtFlora(s, p.lane, p.col, p.dmg);
         s.events.push('chomp');
-        if (f.hp <= 0) {
-          s.grid[p.lane][p.col] = null;
-          pushFx(s, 'sporeburst', p.lane, p.col + 0.5, 0.5);
-          s.events.push('plantdie');
-        }
       }
       s.eprojs.splice(i, 1); // dug up or destroyed mid-flight? the spine buries itself
     } else if (p.x < -0.5) {
@@ -733,6 +869,7 @@ export function stepGame(s: GameState) {
     if (s.fx[i].ttl <= 0) s.fx.splice(i, 1);
   }
   for (let l = 0; l < LANES; l++) if (s.snareFx[l] > 0) s.snareFx[l] -= TICK;
+  if (s.lotusT > 0) s.lotusT = Math.max(0, s.lotusT - TICK);
   for (const e of s.enemies) if (e.hitFlash > 0) e.hitFlash -= TICK;
   if (s.shake > 0) s.shake -= TICK;
 
