@@ -7,6 +7,7 @@ import {
   FRONT_OFF,
   LANES,
   TICK,
+  type DmgKind,
   type EnemyEnt,
   type EnemyKey,
   type FloraEnt,
@@ -28,6 +29,18 @@ const THIEF_EXIT_X = COLS + 0.55; // off-board with the loot
 const LOTUS_WINDOW = 5; // Nectar Lotus: seconds to spend the tray rebate
 const LOTUS_REBATE = 1; // …worth this many seconds off the next recharge
 const SNAP_REACH = 1.15; // Snaptrap: how far past its tile edge the jaws close
+// ── Enemy Batch 2 ──
+const PACK_OFFSET = 0.13; // Chitterling Pack: how tightly the four bodies stack
+const DASH_MUL = 7; // Nightcap Assassin: sprint speed as a multiple of its walk
+const DASH_TIME = 3.0; // …safety cap — normally the sprint ends on the burst
+const SLUG_POISON_WEIGHT = 1 / 20; // Grovemaw Slug: control-value of 1 point of DoT over its life
+const HOLLOW_CHANNELS: DmgKind[] = ['physical', 'splash']; // the two live channels it alternates
+const HOLLOW_WISP_EVERY = [0, 8, 6, 4.5]; // seconds between shed Molt Wisps, by phase
+// ── Flora Batch 2 ──
+const BOSS_KNOCKBACK = 0.5; // Gale Fern: a boss is shoved half as far — it is very heavy
+const BEAM_SFX_EVERY = 5; // ticks — the Emberlash hum, not a machine gun
+const AMBUSH_REACH = 1.15; // Ambush Fern: must exceed the +1.05 blocking stand-off or nothing ever enters
+const PRISM_FIRE_SPLASH = 1; // Prism Bud: blast radius of the fire half of the alternation
 
 // Deterministic RNG (mulberry32) — state lives on the GameState so the whole
 // simulation is reproducible from (level, loadout, seed).
@@ -115,6 +128,15 @@ export function createGame(level: LevelDef, loadout: FloraKey[], seed?: number):
 }
 
 export function spawnEnemy(s: GameState, type: EnemyKey, lane: number, x = SPAWN_X, catapulted = false): EnemyEnt {
+  const lead = spawnOne(s, type, lane, x, catapulted);
+  // ── Chitterling Pack: one lane slot, four bodies, stacked nose to tail.
+  // They walk in on the same beat rather than as four separate spawns.
+  const pack = ENEMIES[type].packSize ?? 1;
+  for (let i = 1; i < pack; i++) spawnOne(s, type, lane, x + i * PACK_OFFSET, false);
+  return lead;
+}
+
+function spawnOne(s: GameState, type: EnemyKey, lane: number, x: number, catapulted: boolean): EnemyEnt {
   const def = ENEMIES[type];
   const boss = !!def.boss;
   const hp = Math.round(def.hp * (boss || def.noScale ? 1 : s.level.hpMul));
@@ -149,6 +171,20 @@ export function spawnEnemy(s: GameState, type: EnemyKey, lane: number, x = SPAWN
     carrySpd: 0,
     stunT: catapulted ? IMP_STUN : 0,
     rootUntil: 0,
+    canSplit: def.splitBelow !== undefined,
+    poisonDps: 0,
+    poisonUntil: 0,
+    drPct: 0,
+    drUntil: 0,
+    dashT: 0,
+    dashUsed: false,
+    dashPassed: 0,
+    dashCol: -1,
+    immuneTo: null,
+    immuneT: 0,
+    immuneOn: false,
+    immuneIdx: 0,
+    enraged: false,
   };
   s.enemies.push(e);
   if (catapulted) {
@@ -194,6 +230,11 @@ export function placeFlora(s: GameState, key: FloraKey, lane: number, col: numbe
     fired: 0,
     prod: 0,
     eatenBy: null,
+    withered: false,
+    shotIdx: 0,
+    ambushT: 0,
+    struck: new Set<number>(),
+    beamId: null,
   };
   s.grid[lane][col] = f;
   s.placedCount++;
@@ -217,17 +258,88 @@ export function shovelAt(s: GameState, lane: number, col: number): boolean {
 }
 
 // ─── Combat helpers ─────────────────────────────────────────────────────────
-function damageEnemy(s: GameState, e: EnemyEnt, dmg: number, slowPct = 0, slowDur = 0, aoe = false) {
+export interface DamageOpts {
+  slowPct?: number;
+  slowDur?: number;
+  noFlash?: boolean; // continuous beams tick 10x/s — don't strobe the hit flash
+  kind?: DmgKind; // defaults to a single-target 'physical' strike
+  poisonDps?: number; // DoT channel (dormant: no Flora applies poison yet)
+  poisonDur?: number;
+}
+
+export function damageEnemy(s: GameState, e: EnemyEnt, dmg: number, o: DamageOpts = {}) {
   if (e.hp <= 0) return;
+  const kind = o.kind ?? 'physical';
+  const aoe = kind === 'splash'; // area damage is what wears a Stoneback slab down
+  let slowPct = o.slowPct ?? 0;
+  let slowDur = o.slowDur ?? 0;
+  let poisonDps = o.poisonDps ?? 0;
+  let poisonDur = o.poisonDur ?? 0;
+
+  // ── Grovemaw Slug: it never resists the hit — it eats the effect riding on it.
+  // A slow or a poison that would land is swallowed instead, and its total value
+  // (pct × seconds) becomes temporary damage reduction. Raw damage is unaffected.
+  const absorb = ENEMIES[e.key].absorbStatus;
+  if (absorb) {
+    let value = 0;
+    let dur = 0;
+    if (slowPct > 0 && slowDur > 0) {
+      value += slowPct * slowDur;
+      dur = Math.max(dur, slowDur);
+    }
+    if (poisonDps > 0 && poisonDur > 0) {
+      value += poisonDps * poisonDur * SLUG_POISON_WEIGHT;
+      dur = Math.max(dur, poisonDur);
+    }
+    if (value > 0) {
+      slowPct = 0;
+      slowDur = 0;
+      poisonDps = 0;
+      poisonDur = 0; // the effect is gone — it is armour now
+      const cap = ENEMIES[e.key].drCap ?? 0.85;
+      const gain = Math.min(cap, value * absorb);
+      e.drPct = Math.min(cap, Math.max(e.drUntil > s.t ? e.drPct : 0, gain));
+      e.drUntil = s.t + dur;
+      pushFx(s, 'feed', e.lane, e.x, 0.7);
+      s.events.push('feed');
+    }
+  }
+
+  // ── The Hollow King's phase-2 ward: one damage channel is simply switched off.
+  // Statuses still land; the damage itself never arrives.
+  if (e.immuneTo === kind) {
+    if (slowPct > 0) {
+      e.slowPct = Math.max(e.slowPct, slowPct);
+      e.slowUntil = s.t + slowDur;
+    }
+    pushFx(s, 'ward', e.lane, e.x, 0.45);
+    s.events.push('ward');
+    return;
+  }
+
+  // Grovemaw Slug's absorbed shield soaks a flat fraction of whatever gets through.
+  let amount = dmg;
+  if (e.drPct > 0 && e.drUntil > s.t) amount *= 1 - e.drPct;
+  // The enraged Hollow King is wide open: it takes double damage.
+  if (e.enraged) amount *= 2;
+
+  const applyStatus = () => {
+    if (slowPct > 0) {
+      e.slowPct = Math.max(e.slowPct, slowPct);
+      e.slowUntil = s.t + slowDur;
+    }
+    if (poisonDps > 0) {
+      e.poisonDps = Math.max(e.poisonDps, poisonDps);
+      e.poisonUntil = Math.max(e.poisonUntil, s.t + poisonDur);
+    }
+  };
+
   // Stoneback Grub: the slab blocks 100% of incoming damage and only splash
   // (Cactus volleys, Frostcap spores) can wear it down. Single-target pings off.
   if (e.maxStone > 0 && e.stone > 0) {
     if (aoe) {
-      e.stone = Math.max(0, e.stone - dmg);
-      if (slowPct > 0) {
-        e.slowPct = Math.max(e.slowPct, slowPct);
-        e.slowUntil = s.t + slowDur;
-      }
+      e.stone = Math.max(0, e.stone - amount);
+      applyStatus();
       e.hitFlash = 0.14;
       if (e.stone <= 0) {
         pushFx(s, 'shieldbreak', e.lane, e.x, 0.6);
@@ -241,19 +353,55 @@ function damageEnemy(s: GameState, e: EnemyEnt, dmg: number, slowPct = 0, slowDu
   }
   // Carapace: shell drinks 50% of each hit until depleted.
   if (e.shell > 0) {
-    const absorbed = Math.min(e.shell, dmg * 0.5);
+    const absorbed = Math.min(e.shell, amount * 0.5);
     e.shell -= absorbed;
-    e.hp -= dmg - absorbed;
+    e.hp -= amount - absorbed;
   } else {
-    e.hp -= dmg;
+    e.hp -= amount;
   }
-  if (slowPct > 0) {
-    e.slowPct = Math.max(e.slowPct, slowPct);
-    e.slowUntil = s.t + slowDur;
+  applyStatus();
+  if (!o.noFlash) e.hitFlash = 0.14;
+
+  // ── Molt Wisp: the first time it crosses below half HP it comes apart rather
+  // than dying. Checked before the death test, so an overkill splash hit splits
+  // it too — which is exactly the trap for one-shot burst.
+  const def = ENEMIES[e.key];
+  if (e.canSplit && def.splitBelow !== undefined && e.hp < e.maxHp * def.splitBelow) {
+    splitEnemy(s, e);
+    return;
   }
-  e.hitFlash = 0.14;
   if (e.hp <= 0) killEnemy(s, e);
 }
+
+/**
+ * Molt Wisp: one body becomes `splitCount` smaller ones, each a `splitHpFrac`
+ * of the parent's max HP. Total HP is conserved; the halves never split again.
+ * Not a kill — nothing died, it just changed shape.
+ */
+function splitEnemy(s: GameState, e: EnemyEnt) {
+  const def = ENEMIES[e.key];
+  const idx = s.enemies.indexOf(e);
+  if (idx === -1) return;
+  s.enemies.splice(idx, 1);
+  const n = def.splitCount ?? 2;
+  const childHp = Math.max(1, Math.round(e.maxHp * (def.splitHpFrac ?? 0.5)));
+  for (let i = 0; i < n; i++) {
+    const child = spawnOne(s, def.splitInto ?? e.key, e.lane, Math.min(COLS + 0.3, e.x + (i - (n - 1) / 2) * 0.36), false);
+    child.hp = childHp;
+    child.maxHp = childHp;
+    child.canSplit = false; // the halves do not split again
+    child.born = s.tick;
+    child.prevX = e.x;
+  }
+  pushFx(s, 'molt', e.lane, e.x, 0.7);
+  s.events.push('molt');
+}
+
+/** The Hollow King enrages: its swings come twice as fast. */
+const atkIntervalOf = (e: EnemyEnt) => {
+  const base = ENEMIES[e.key].atkInterval;
+  return e.enraged ? base / 2 : base;
+};
 
 function killEnemy(s: GameState, e: EnemyEnt, quiet = false) {
   const idx = s.enemies.indexOf(e);
@@ -293,7 +441,7 @@ function killEnemy(s: GameState, e: EnemyEnt, quiet = false) {
     }
     s.events.push('split');
   }
-  if (e.key === 'colossus') s.events.push('bossdead');
+  if (e.key === 'colossus' || e.key === 'hollowking') s.events.push('bossdead');
 }
 
 function findTarget(s: GameState, f: FloraEnt): EnemyEnt | null {
@@ -323,6 +471,10 @@ function findTarget(s: GameState, f: FloraEnt): EnemyEnt | null {
 function projectileKind(f: FloraEnt, target: EnemyEnt): Proj['kind'] {
   if (f.key === 'cinderpod') return 'cinder';
   if (f.key === 'bindweed') return 'bind';
+  if (f.key === 'ironbark') return 'bolt';
+  if (f.key === 'needlereed') return 'needle';
+  if (f.key === 'gale') return 'gale';
+  if (f.key === 'prism') return f.shotIdx % 2 === 1 ? 'cinder' : 'ray'; // fire burst / focused bolt
   if (f.key === 'deeproot' && target.burrowed) return 'root';
   if (f.key === 'thornvine' || f.key === 'deeproot' || f.key === 'watchvine') return 'thorn';
   if (f.key === 'cactus') return 'spike';
@@ -330,15 +482,51 @@ function projectileKind(f: FloraEnt, target: EnemyEnt): Proj['kind'] {
   return 'ray';
 }
 
-function fireProjectile(s: GameState, f: FloraEnt, target: EnemyEnt) {
+/** Gale Fern: physical displacement. Not a status, so root immunity is irrelevant. */
+function knockBack(s: GameState, e: EnemyEnt, tiles: number) {
+  if (e.hp <= 0 || e.burrowed || e.jumpT > 0) return; // sky is fine; soil and mid-leap are not shovable
+  const push = ENEMIES[e.key].boss ? tiles * BOSS_KNOCKBACK : tiles;
+  const from = e.x;
+  e.x = Math.min(SPAWN_X, e.x + push); // never past the spawn line, or nothing could hit it
+  // a Nightcap Assassin caught mid-sprint is knocked clean out of its dash
+  if (e.dashT > 0) {
+    e.dashT = 0;
+    e.dashCol = -1;
+  }
+  if (e.x > from) {
+    pushFx(s, 'gale', e.lane, e.x, 0.6);
+    s.events.push('gale');
+  }
+}
+
+function fireProjectile(s: GameState, f: FloraEnt, target: EnemyEnt, opts: { lock?: boolean } = {}) {
   const atk = FLORA[f.key].attack!;
-  const kind = projectileKind(f, target);
+  const kind = projectileKind(f, target); // reads f.shotIdx — call before the increment
   // A rearguard shot may travel west; everything else fires east.
   const dir: 1 | -1 = target.x < f.col + 0.5 ? -1 : 1;
   const x = f.col + (dir === 1 ? 0.75 : 0.25);
   const underground = !!atk.underground && target.burrowed;
   // Locked shots fly past every other Blightspawn to reach their chosen victim.
-  const locked = !!atk.rearmost || underground;
+  const locked = opts.lock ?? (!!atk.rearmost || underground);
+
+  // ── Prism Bud: every other shot leaves on a different damage channel, so
+  // whichever one The Hollow King has warded, the next shot is on the other.
+  // The fire half is genuine splash — that is what makes it a different channel.
+  let dmgKind: DmgKind = atk.poisonDps ? 'poison' : atk.aoe || (atk.splash ?? 0) > 0 ? 'splash' : 'physical';
+  let splash = atk.splash ?? 0;
+  let aoe = !!atk.aoe;
+  if (atk.altKind) {
+    if (f.shotIdx % 2 === 1) {
+      dmgKind = 'splash';
+      splash = Math.max(splash, PRISM_FIRE_SPLASH);
+      aoe = true;
+    } else {
+      dmgKind = 'physical';
+      splash = 0;
+      aoe = false;
+    }
+    f.shotIdx++;
+  }
   s.projs.push({
     id: s.nextId++,
     lane: f.lane,
@@ -347,24 +535,59 @@ function fireProjectile(s: GameState, f: FloraEnt, target: EnemyEnt) {
     dmg: atk.dmg,
     pierce: !!atk.pierce,
     fly: !!atk.fly,
-    aoe: !!atk.aoe,
     slowPct: atk.slowPct ?? 0,
     slowDur: atk.slowDur ?? 0,
     kind,
     hitIds: new Set(),
     dir,
-    splash: atk.splash ?? 0,
+    splash,
+    aoe,
     underground,
     rootDur: atk.rootDur ?? 0,
     targetId: locked ? target.id : undefined,
+    // Which channel this hit arrives on. The Hollow King's phase-2 ward shuts
+    // exactly one of these off, so a loadout of only one kind stalls out.
+    dmgKind,
+    poisonDps: atk.poisonDps ?? 0,
+    poisonDur: atk.poisonDur ?? 0,
+    knockback: atk.knockback ?? 0,
   });
   f.fired = 0.16;
-  s.events.push(kind === 'thorn' ? 'shoot' : kind);
+  s.events.push(kind === 'thorn' || kind === 'needle' ? 'shoot' : kind);
+}
+
+/**
+ * Needle Reed: one volley of `spray` needles, dealt out round-robin across up to
+ * `sprayTargets` enemies rather than piled into the frontmost. Each needle is
+ * locked to its own victim so the spread actually lands where it was aimed.
+ */
+function fireSpray(s: GameState, f: FloraEnt): boolean {
+  const atk = FLORA[f.key].attack!;
+  const pool: EnemyEnt[] = [];
+  for (const e of s.enemies) {
+    if (e.lane !== f.lane || e.hp <= 0) continue;
+    if (e.burrowed || (isFlying(e) && !atk.fly)) continue;
+    if (e.x - FRONT_OFF <= f.col + 0.1) continue;
+    if (e.x > COLS + 0.6) continue;
+    pool.push(e);
+  }
+  if (!pool.length) return false;
+  pool.sort((a, b) => a.x - b.x);
+  const targets = pool.slice(0, Math.max(1, atk.sprayTargets ?? 1));
+  for (let i = 0; i < (atk.spray ?? 1); i++) fireProjectile(s, f, targets[i % targets.length], { lock: true });
+  return true;
 }
 
 /** Bindweed Snare: pin an enemy where it stands — no damage, no walking, no biting. */
 function rootEnemy(s: GameState, e: EnemyEnt, dur: number) {
   if (e.hp <= 0 || e.burrowed || isFlying(e)) return;
+  // ── Barkskin Marauder: bark over sinew. The lash lands and finds nothing to
+  // hold — it cannot be time-stalled, only damaged down.
+  if (ENEMIES[e.key].rootImmune) {
+    pushFx(s, 'shrug', e.lane, e.x, 0.5);
+    s.events.push('shrug');
+    return;
+  }
   const fresh = e.rootUntil <= s.t;
   e.rootUntil = Math.max(e.rootUntil, s.t + dur);
   // A Gargant Husk yanked off its feet loses the whole wind-up and must start over.
@@ -449,9 +672,20 @@ export function stepGame(s: GameState) {
       if (f.fired > 0) f.fired -= TICK;
       if (f.prod > 0) f.prod -= TICK;
       f.eatenBy = null;
+      f.withered = false;
       const def = FLORA[f.key];
       if (def.produce) {
-        f.prodT -= TICK;
+        // ── Fen Wretch: while it lives anywhere in this lane, every Nectar plant
+        // here ripens at a reduced rate. An aura, not a hit — it never has to
+        // reach the plant to hurt it, so leaving it parked at a wall quietly
+        // halves your economy.
+        let drain = 1;
+        for (const e of s.enemies) {
+          const d = ENEMIES[e.key].nectarDrain;
+          if (e.lane === l && e.hp > 0 && d) drain = Math.min(drain, d);
+        }
+        f.withered = drain < 1;
+        f.prodT -= TICK * drain;
         if (f.prodT <= 0) {
           f.prodT += def.produce.interval;
           s.nectar += def.produce.amount;
@@ -467,16 +701,36 @@ export function stepGame(s: GameState) {
         }
       }
       if (def.attack) {
-        const target = findTarget(s, f);
-        if (target) {
+        if (def.attack.beam) {
+          // ── Emberlash Vine: a held beam, not a volley. Damage lands every tick
+          // on whatever is frontmost right now, so a Molt Wisp that splits mid-burn
+          // costs it nothing — there is no shot in flight to bury and no wind-up
+          // to restart on the smaller body.
+          const target = findTarget(s, f);
+          f.beamId = target ? target.id : null;
+          if (target) {
+            damageEnemy(s, target, def.attack.dmg * TICK, { kind: 'physical', noFlash: true });
+            if (s.tick % BEAM_SFX_EVERY === 0) s.events.push('beam');
+          }
+        } else if (def.attack.spray) {
+          // ── Needle Reed: one volley, spread across several bodies at once
           f.atkT -= TICK;
           if (f.atkT <= 0) {
-            f.atkT += def.attack.interval;
-            fireProjectile(s, f, target);
+            if (fireSpray(s, f)) f.atkT += def.attack.interval;
+            else f.atkT = Math.min(def.attack.interval * 0.5, f.atkT + TICK);
           }
         } else {
-          // stay at most half-charged while idle (no full latch)
-          f.atkT = Math.min(f.atkT, def.attack.interval * 0.5);
+          const target = findTarget(s, f);
+          if (target) {
+            f.atkT -= TICK;
+            if (f.atkT <= 0) {
+              f.atkT += def.attack.interval;
+              fireProjectile(s, f, target);
+            }
+          } else {
+            // stay at most half-charged while idle (no full latch)
+            f.atkT = Math.min(f.atkT, def.attack.interval * 0.5);
+          }
         }
       }
     }
@@ -539,8 +793,10 @@ export function stepGame(s: GameState) {
       }
 
       let stop = -Infinity;
-      // conga line: keep spacing behind the enemy ahead
-      if (i > 0) stop = ground[i - 1].x + def.spacing;
+      // Conga line: keep spacing behind the enemy ahead. Clamped to the spawn
+      // line — an unclamped shove near the east edge used to carry bodies past
+      // the targeting cutoff, where no Flora could ever reach them again.
+      if (i > 0) stop = Math.min(SPAWN_X, ground[i - 1].x + def.spacing);
       // blocking flora: nearest plant at or ahead of the mouth
       // (burrowed Tunnel Larva pass straight through)
       const mouth = e.x - FRONT_OFF;
@@ -594,6 +850,51 @@ export function stepGame(s: GameState) {
         continue;
       }
 
+      // ── Nightcap Assassin: your wall does not hold it. The first Flora to block
+      // it sets it sprinting; it slips past `dashThrough` plants untouched, puts a
+      // single burst into the next one it reaches — the back row you thought was
+      // safe — then settles back to an ordinary walk. Once per assassin.
+      if (def.dashThrough !== undefined) {
+        if (!e.dashUsed && e.dashT <= 0 && blocked && blockCol >= 0) {
+          e.dashUsed = true;
+          e.dashT = DASH_TIME;
+          e.dashPassed = 0;
+          e.dashCol = -1;
+          pushFx(s, 'dash', l, e.x, 0.55);
+          s.events.push('dash');
+        }
+        if (e.dashT > 0) {
+          e.dashT = Math.max(0, e.dashT - TICK);
+          const dSlow = e.slowUntil > s.t ? 1 - e.slowPct : 1;
+          e.x -= def.speed * DASH_MUL * dSlow * TICK; // no spacing, no blocking — it is a blur
+          e.chewing = false;
+          const tile = Math.floor(e.x - FRONT_OFF);
+          const victim = tile >= 0 && tile < COLS ? s.grid[l][tile] : null;
+          if (victim && tile !== e.dashCol) {
+            if (e.dashPassed >= def.dashThrough) {
+              // this is the back-row plant: one burst, then it is just a walker
+              hurtFlora(s, l, tile, def.dmg);
+              pushFx(s, 'strike', l, tile + 0.5, 0.6);
+              s.shake = Math.max(s.shake, 0.22);
+              s.events.push('strike');
+              e.dashT = 0;
+              e.atkT = atkIntervalOf(e); // that burst counted as its first bite
+            } else {
+              e.dashPassed++;
+              e.dashCol = tile;
+              pushFx(s, 'dash', l, e.x, 0.3);
+            }
+          } else if (!victim && tile !== e.dashCol && tile >= 0 && e.dashPassed >= def.dashThrough) {
+            // Past the front line. If there is still Flora west of here it keeps
+            // running; if not, there is no back row to burst and it stands down.
+            e.dashCol = tile;
+            if (!s.grid[l].some((f, c) => !!f && c <= tile)) e.dashT = 0;
+          }
+          if (e.dashT === 0) e.dashCol = -1;
+          continue;
+        }
+      }
+
       // ── Gargant Husk: no chewing — a telegraphed smash that kills in one hit
       if (def.smashWindup) {
         const f = blockCol >= 0 ? s.grid[l][blockCol] : null;
@@ -625,7 +926,7 @@ export function stepGame(s: GameState) {
           e.chewing = true; // aim pose
           e.atkT -= TICK;
           if (e.atkT <= 0) {
-            e.atkT += def.atkInterval;
+            e.atkT += atkIntervalOf(e);
             s.eprojs.push({
               id: s.nextId++,
               lane: l,
@@ -638,7 +939,7 @@ export function stepGame(s: GameState) {
             s.events.push('sting');
           }
         } else {
-          e.atkT = Math.min(e.atkT, def.atkInterval * 0.6);
+          e.atkT = Math.min(e.atkT, atkIntervalOf(e) * 0.6);
         }
         continue;
       }
@@ -670,7 +971,7 @@ export function stepGame(s: GameState) {
           f.eatenBy = e.id;
           e.atkT -= TICK;
           if (e.atkT <= 0) {
-            e.atkT += def.atkInterval;
+            e.atkT += atkIntervalOf(e);
             f.hp -= def.dmg;
             f.flash = 0.2;
             s.events.push('chomp');
@@ -682,13 +983,13 @@ export function stepGame(s: GameState) {
           }
         }
       } else {
-        e.atkT = Math.min(e.atkT, def.atkInterval * 0.6);
+        e.atkT = Math.min(e.atkT, atkIntervalOf(e) * 0.6);
       }
     }
     for (let i = 0; i < flyers.length; i++) {
       const e = flyers[i];
       e.prevX = e.x;
-      const stop = i > 0 ? flyers[i - 1].x + ENEMIES[e.key].spacing : -Infinity;
+      const stop = i > 0 ? Math.min(SPAWN_X, flyers[i - 1].x + ENEMIES[e.key].spacing) : -Infinity;
       e.x = Math.max(stop, e.x - ENEMIES[e.key].speed * TICK);
       e.chewing = false;
     }
@@ -715,6 +1016,56 @@ export function stepGame(s: GameState) {
         killEnemy(s, e);
         pushFx(s, 'snap', l, e.x, 0.55);
         s.events.push('snap');
+      }
+    }
+  }
+
+  // ── Sentinel Bloom: anything that sprints or leaps across its tile eats a
+  // counter-strike, once per enemy per bloom. It never fires at walkers — the
+  // whole point is that "get behind the wall fast" now carries a price.
+  for (let l = 0; l < LANES; l++) {
+    for (let c = 0; c < COLS; c++) {
+      const f = s.grid[l][c];
+      if (!f) continue;
+      const riposte = FLORA[f.key].counterDash;
+      if (!riposte) continue;
+      for (const e of [...s.enemies]) {
+        if (e.lane !== l || e.hp <= 0 || e.burrowed) continue;
+        if (e.dashT <= 0 && e.jumpT <= 0) continue; // only mid-sprint or mid-leap
+        if (e.x - FRONT_OFF > c + SNAP_REACH) continue; // not here yet
+        if (e.x < c + 0.2) continue; // already gone past
+        if (f.struck.has(e.id)) continue; // once per enemy
+        f.struck.add(e.id);
+        damageEnemy(s, e, riposte, { kind: 'physical' });
+        f.fired = 0.3; // lights the bloom up for the sprite
+        pushFx(s, 'riposte', l, e.x, 0.6);
+        s.events.push('riposte');
+      }
+    }
+  }
+
+  // ── Ambush Fern: folded and inert until something steps into its own tile,
+  // then one huge hit before it folds back down to recharge.
+  for (let l = 0; l < LANES; l++) {
+    for (let c = 0; c < COLS; c++) {
+      const f = s.grid[l][c];
+      if (!f) continue;
+      const def = FLORA[f.key];
+      if (!def.ambush) continue;
+      if (f.ambushT > 0) {
+        f.ambushT -= TICK;
+        continue;
+      }
+      for (const e of [...s.enemies]) {
+        if (e.lane !== l || e.hp <= 0 || e.burrowed || isFlying(e) || e.jumpT > 0) continue;
+        const mouth = e.x - FRONT_OFF;
+        if (mouth > c + AMBUSH_REACH || mouth < c - 0.2) continue;
+        damageEnemy(s, e, def.ambush, { kind: 'physical' });
+        f.ambushT = def.ambushCd ?? 6;
+        pushFx(s, 'ambush', l, e.x, 0.7);
+        s.shake = Math.max(s.shake, 0.2);
+        s.events.push('ambush');
+        break; // one victim per spring
       }
     }
   }
@@ -766,6 +1117,58 @@ export function stepGame(s: GameState) {
     }
   }
 
+  // ── The Hollow King: three phases, and none of them are the Colossus's ──
+  for (const e of [...s.enemies]) {
+    if (e.key !== 'hollowking') continue;
+    const def = ENEMIES[e.key];
+    const frac = e.hp / e.maxHp;
+    const phase = frac > 2 / 3 ? 1 : frac > (def.enrageFrac ?? 0.25) ? 2 : 3;
+    if (phase !== e.phase) {
+      e.phase = phase;
+      pushFx(s, 'shockwave', e.lane, e.x - 0.5, 0.9);
+      s.shake = Math.max(s.shake, 0.5);
+      s.events.push('phase');
+      if (phase === 3) {
+        // enrage: swings come twice as fast, and the body takes twice the damage
+        e.enraged = true;
+        pushFx(s, 'enrage', e.lane, e.x, 1.1);
+        s.events.push('enrage');
+      }
+    }
+    // Phase 2 onward: one damage channel shuts off for `on` seconds, opens for
+    // `off`, and alternates — so a loadout of only one kind of damage stalls out
+    // for five seconds at a time and the player has to actually switch plants.
+    const cyc = def.immuneCycle;
+    if (e.phase >= 2 && cyc) {
+      e.immuneT -= TICK;
+      if (e.immuneT <= 0) {
+        if (e.immuneOn) {
+          e.immuneOn = false;
+          e.immuneTo = null;
+          e.immuneT = cyc.off;
+        } else {
+          e.immuneOn = true;
+          e.immuneTo = HOLLOW_CHANNELS[e.immuneIdx % HOLLOW_CHANNELS.length];
+          e.immuneIdx++;
+          e.immuneT = cyc.on;
+          pushFx(s, 'ward', e.lane, e.x, 0.9);
+          s.events.push('ward');
+        }
+      }
+    }
+    // It sheds Molt Wisps as it walks — and calls more in from the crown, across
+    // the whole board. Without the cross-lane calls the entire fight collapses
+    // into one lane and every plant the player owns piles onto the King.
+    e.addT -= TICK;
+    if (e.addT <= 0) {
+      e.addT = HOLLOW_WISP_EVERY[e.phase] ?? HOLLOW_WISP_EVERY[1];
+      spawnEnemy(s, 'wisp', e.lane, Math.min(SPAWN_X, e.x + 1.4)); // behind the King, never in front
+      spawnEnemy(s, 'wisp', Math.floor(rand(s) * LANES));
+      if (e.phase === 3) spawnEnemy(s, 'wisp', Math.floor(rand(s) * LANES));
+      s.events.push('bossadd');
+    }
+  }
+
   // ── Projectiles ──
   for (let i = s.projs.length - 1; i >= 0; i--) {
     const p = s.projs[i];
@@ -787,8 +1190,17 @@ export function stepGame(s: GameState) {
       return true;
     };
     const strike = (e: EnemyEnt) => {
-      if (p.dmg > 0) damageEnemy(s, e, p.dmg, p.slowPct, p.slowDur, p.aoe);
+      if (p.dmg > 0 || p.poisonDps > 0) {
+        damageEnemy(s, e, p.dmg, {
+          slowPct: p.slowPct,
+          slowDur: p.slowDur,
+          kind: p.dmgKind,
+          poisonDps: p.poisonDps,
+          poisonDur: p.poisonDur,
+        });
+      }
       if (p.rootDur > 0) rootEnemy(s, e, p.rootDur);
+      if (p.knockback > 0) knockBack(s, e, p.knockback);
     };
     let hitSomething = false;
     if (p.pierce) {
@@ -863,6 +1275,17 @@ export function stepGame(s: GameState) {
     }
   }
 
+  // ── DoT channel: poison keeps ticking whatever else the body is doing.
+  // Wired end to end but dormant — no Flora applies poison yet.
+  for (const e of [...s.enemies]) {
+    if (e.poisonDps <= 0) continue;
+    if (e.poisonUntil <= s.t) {
+      e.poisonDps = 0;
+      continue;
+    }
+    damageEnemy(s, e, e.poisonDps * TICK, { kind: 'poison' });
+  }
+
   // ── Timers, fx, endings ──
   for (let i = s.fx.length - 1; i >= 0; i--) {
     s.fx[i].ttl -= TICK;
@@ -871,6 +1294,7 @@ export function stepGame(s: GameState) {
   for (let l = 0; l < LANES; l++) if (s.snareFx[l] > 0) s.snareFx[l] -= TICK;
   if (s.lotusT > 0) s.lotusT = Math.max(0, s.lotusT - TICK);
   for (const e of s.enemies) if (e.hitFlash > 0) e.hitFlash -= TICK;
+  for (const e of s.enemies) if (e.drPct > 0 && e.drUntil <= s.t) e.drPct = 0; // absorbed shield expires
   if (s.shake > 0) s.shake -= TICK;
 
   if (s.pending.length === 0 && s.enemies.length === 0 && s.status === 'playing') {
@@ -888,11 +1312,16 @@ export function levelEnemyIntel(level: LevelDef): EnemyKey[] {
 const ENEMY_SORT: EnemyKey[] = [
   'gnat', 'skitter', 'beetle', 'warden', 'drifter',
   'vaulter', 'larva', 'grub', 'ranger', 'imp', 'thief', 'husk',
-  'brute', 'colossus',
+  'chitter', 'wisp', 'nightcap', 'wretch', 'marauder', 'slug',
+  'brute', 'colossus', 'hollowking',
 ];
 
+/** Every Blightspawn body a level fields — a Chitterling group of 1 is 4 bodies. */
 export function totalEnemies(level: LevelDef): number {
-  return level.waves.reduce((n, w) => n + w.groups.reduce((m, g) => m + g.count, 0), 0);
+  return level.waves.reduce(
+    (n, w) => n + w.groups.reduce((m, g) => m + g.count * (ENEMIES[g.type].packSize ?? 1), 0),
+    0,
+  );
 }
 
 export { TICK, LANES, COLS };

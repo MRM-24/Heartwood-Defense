@@ -10,7 +10,7 @@ import type { FloraKey, LevelDef } from './game/types';
 type Screen =
   | { name: 'title' }
   | { name: 'worlds' }
-  | { name: 'levels'; world: 1 | 2 | 3 }
+  | { name: 'levels'; world: 1 | 2 | 3 | 4 }
   | { name: 'loadout'; level: LevelDef }
   | { name: 'game'; level: LevelDef };
 

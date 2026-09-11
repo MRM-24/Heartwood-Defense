@@ -8,16 +8,19 @@ binary assets**.
 
 ## ✨ Features
 
-- **3 worlds, 15 levels** — *Verdant Vale* teaches the basics; *Frostmire Hollow*
+- **4 worlds, 20 levels** — *Verdant Vale* teaches the basics; *Frostmire Hollow*
   throws flying, armored, splitting, and boss enemies at you; *Rootbound Depths*
   debuts **Batch 1**: seven new Blightspawn built to punish lazy strategies — and
-  seven new Flora built to answer them.
-- **13 Flora, 14 Blightspawn** — each with distinct roles, counters, and attack patterns.
+  seven new Flora built to answer them; *The Hollow Crown* debuts **Batch 2**: seven
+  more Blightspawn built to punish the *counters* Batch 1 taught you to reach for —
+  and **Flora Batch 2** answers those in turn, without using a single status effect.
+- **20 Flora, 21 Blightspawn, 3 bosses** — each with distinct roles, counters, and attack patterns.
 - **Loadout system** — pick up to 6 Flora before each level; unlocks grow as you win.
 - **Root Snares** — one emergency snare per lane that roots the first enemy to cross
   it. Finish a level with snares in the ground to earn up to ★★★.
 - **Boss fights** — the Rotback Brute splits into swarms; the Withered Colossus has
-  three phases and calls adds.
+  three phases and calls adds; the Hollow King switches a whole damage channel off
+  for five seconds at a time and enrages below a quarter HP.
 - **2× speed toggle, pause, restart, keyboard shortcuts.**
 - **Progress saved locally** (stars, unlocks, mute preference) via `localStorage`.
 - **Fully procedural audio** — WebAudio-synthesized SFX plus a generated ambient
@@ -40,6 +43,13 @@ binary assets**.
 | **Watchvine** | 150 | Rearguard | Plantable in any tile, front or back. Always strikes the Blightspawn furthest along its lane — even one that has slipped behind it. 20 dmg every 1.5s. |
 | **Bindweed Snare** | 125 | Control | Every 4s it pins the leading foe for 3s: no damage, total immobilise, and a winding-up Gargant Husk loses its smash entirely. |
 | **Nectar Lotus** | 100 | Economy | Ripens +40 Nectar every 15s; each harvest also rebates 1s off the recharge of the next Flora you plant within 5s. |
+| **Ironbark Titan** | 250 | Heavy Hitter | 80 raw damage every 3s at one target. No splash, no chill, no poison — a Grovemaw Slug has nothing to swallow. |
+| **Emberlash Vine** | 150 | Burn Beam | A continuous **8 dmg/s beam** on whatever is frontmost. No projectile, no wind-up, so a Molt Wisp splitting mid-burn costs it nothing. |
+| **Needle Reed** | 125 | Spray | Five 6-damage needles every 2s, dealt across **up to three** enemies rather than piled into one. |
+| **Gale Fern** | 150 | Displacement | Every 6s, shoves the leading enemy **back two tiles**. Physical displacement — root immunity does not answer it, and it cancels a Nightcap sprint. Bosses are shoved half as far. |
+| **Sentinel Bloom** | 175 | Riposte | Never shoots. Any enemy that **sprints or leaps** across its tile takes an automatic 50-damage counter-strike, once per enemy. Walkers are ignored. |
+| **Ambush Fern** | 125 | Trap | Inert until something enters its own tile, then one **120-damage** hit before a 6s recharge. |
+| **Prism Bud** | 200 | Alternating | 18 dmg every 1.8s, **alternating channel every other shot** — a focused physical bolt, then a fire burst with splash. Whatever the Hollow King has warded, the next shot is on the other one. |
 
 ## 👾 The Blightspawn
 
@@ -59,6 +69,44 @@ binary assets**.
 | **Spore Imp** | Catapulted mid-wave into a random back-half tile, behind your wall entirely. 15 HP, but teeth where you have none. |
 | **Gargant Husk** | Doesn't chip damage: a telegraphed 1.5s wind-up, then the Flora it's attacking is destroyed in one hit — regardless of HP. Appears sparingly, late. |
 | **Root Thief** | Never attacks. Every 6s it snatches the most wounded Flora in its lane and hauls it off-board over 3s. Kill it mid-heist and the plant drops back unharmed; let it escape and it's gone for good. |
+| **Molt Wisp** | 50 HP. The first time it drops below half HP it comes apart into **two 25-HP wisps** that never split again — total HP unchanged, shape of the problem changed. A single big splash hit just makes two targets. |
+| **Chitterling Pack** | 20 HP × 4. Arrives as four bodies stacked in **one lane slot** at a dead run (faster than a Skitter). Each is far below Snaptrap's 100-HP jaw threshold, but there are four of them six inches apart. |
+| **Nightcap Assassin** | 90 HP. The first Flora to block it doesn't hold it: it **sprints past your front two plants untouched**, puts a single 20-dmg burst into whatever it reaches in the back row, then settles into an ordinary walk. Once per assassin. |
+| **Fen Wretch** | 130 HP. An **aura, not an attack**: while it lives in a lane, every Nectar plant there ripens at **half rate**. It never has to reach the plant. Kill it first or your economy stalls. |
+| **Barkskin Marauder** | 180 HP, 18 dmg/1.4s. **Immune to root and immobilise** — a Bindweed Snare lashes it and falls away. It cannot be time-stalled, only damaged down. |
+| **Grovemaw Slug** | 200 HP, never bites. Any **slow or poison** that lands on it is swallowed instead, and its total value (`pct × seconds`) becomes **25% damage reduction per point**, capped at 85%, for the effect's duration. Frostcap chills are its dinner. |
+| **The Hollow King** | 3500 HP world boss. Sheds Molt Wisps across the whole board; below ⅔ HP it **shuts one damage channel off** for 5s at a time, alternating between single-target strikes and splash; below ¼ HP it **enrages** — twice the swing rate, twice the damage taken. |
+
+**Batch 2 design notes** — Batch 1 taught a set of reflexes; Batch 2 punishes the
+reflexes rather than the laziness. **Grovemaw Slug** and **Barkskin Marauder** are
+direct counters to the status-effect plants Batch 1 handed out: the Slug *eats*
+Frostcap's chill and converts it into armour, the Marauder shrugs off Bindweed's
+root outright, so a control-heavy loadout has to keep raw damage in the tray.
+**Chitterling Pack** stress-tests Snaptrap Root's "no cooldown between bites" claim
+instead of letting it be trivially strong — and the claim holds. **Nightcap
+Assassin** and **Fen Wretch** both make the back row a genuine risk zone rather
+than free safety for Watchvine / Nectar Lotus / Glowbulb. **Molt Wisp** quietly
+taxes one-shot splash: every big hit that crosses the threshold buys the blight two
+bodies instead of one. **The Hollow King** is the loadout check — a tray that only
+does one kind of damage stalls for five seconds at a time.
+
+**Flora Batch 2 design notes** — the Crown eats statuses and shrugs off roots, so
+every new plant does its work with physics instead. **Ironbark Titan** is raw burst
+with nothing to absorb; **Gale Fern** is displacement, which Barkskin's root
+immunity does not answer; **Emberlash Vine** is a continuous beam with no
+projectile to bury, which is precisely what a Molt Wisp split punishes in a
+volley shooter; **Needle Reed** spends its damage across a cluster instead of
+overkilling one body; **Sentinel Bloom** and **Ambush Fern** make the tile itself
+hostile to anything that gets past the wall; and **Prism Bud** is the direct
+answer to a boss that switches damage types, because it is never on one type for
+long. They unlock across World 4 (levels 16–20), one answer per level.
+
+**The DoT channel** — the engine has a full damage-over-time channel
+(`attack.poisonDps` / `poisonDur` → projectile → tick → Grovemaw Slug absorption →
+Hollow King ward) wired end to end and covered by tests, but **no Flora produces
+poison yet**. Adding an Acidroot later is a two-number change in `data.ts`, with no
+engine surgery. Until then the King's ward alternates between the two channels that
+are actually live: `physical` (single-target strikes) and `splash` (area damage).
 
 **Batch 1 design notes** — Stoneback Grub and Carapace Warden pull loadouts in
 opposite directions (splash vs burst). Tunnel Larva, Locust Ranger, and Spore Imp
@@ -167,11 +215,15 @@ All audio is generated with the Web Audio API at runtime:
 
 ## ⚖️ Balance Tooling
 
-`scripts/sim.ts` bundles a scripted average-skill player and plays all 15 levels
-headlessly — useful after tuning enemy stats:
+`scripts/sim.ts` bundles a scripted average-skill player and plays all 20 levels
+headlessly — useful after tuning enemy stats. `scripts/novice.ts` runs the same
+levels with only the three starter plants, which is the check that a new world is
+actually harder than the last one:
 
 ```bash
 npx esbuild scripts/sim.ts --bundle --platform=node --format=cjs --outfile=/tmp/sim.cjs && node /tmp/sim.cjs
+npx esbuild scripts/novice.ts --bundle --platform=node --format=cjs --outfile=/tmp/novice.cjs && node /tmp/novice.cjs
+npx esbuild scripts/test.ts --bundle --platform=node --format=cjs --outfile=/tmp/test.cjs && node /tmp/test.cjs
 ```
 
 ---

@@ -117,6 +117,20 @@ export function sfxEvent(name: string) {
     case 'absorb': tone(1400, 0.06, 'square', 0.04, 900); noise(0.05, 0.04, 1800); break; // spine vs bulwark
     case 'under': noise(0.12, 0.08, 420); tone(180, 0.12, 'triangle', 0.05, 90); break; // root round breaks earth
     case 'lotus': tone(1046, 0.12, 'sine', 0.07); tone(1318, 0.16, 'sine', 0.05, undefined, 0.07); break; // rebate sparkle
+    // ── Enemy Batch 2 ──
+    case 'molt': tone(680, 0.16, 'sine', 0.08, 1180); noise(0.1, 0.06, 2600); break; // a wisp peels apart
+    case 'feed': tone(300, 0.22, 'sine', 0.09, 620); tone(620, 0.16, 'sine', 0.05, 240, 0.08); break; // slug swallows the effect
+    case 'shrug': tone(180, 0.1, 'square', 0.07, 120); noise(0.08, 0.06, 700); break; // bark throws the root off
+    case 'dash': noise(0.22, 0.1, 2800); tone(1400, 0.2, 'sine', 0.05, 500); break; // assassin breaks into a sprint
+    case 'strike': tone(180, 0.14, 'square', 0.13, 70); noise(0.12, 0.1, 1600); break; // …and lands its one burst
+    case 'ward': tone(1568, 0.3, 'sine', 0.07, 1046); tone(2093, 0.24, 'sine', 0.04, undefined, 0.06); break; // a damage channel shuts
+    case 'enrage': tone(70, 0.9, 'sawtooth', 0.16, 40); noise(0.6, 0.13, 260); tone(140, 0.8, 'square', 0.07, 70, 0.1); break;
+    // ── Flora Batch 2 ──
+    case 'bolt': tone(180, 0.16, 'square', 0.11, 90); noise(0.1, 0.08, 600); break; // ironbark swing
+    case 'beam': tone(420, 0.18, 'sawtooth', 0.035, 520); noise(0.1, 0.025, 2600); break; // emberlash hum (throttled)
+    case 'gale': noise(0.34, 0.11, 900); tone(700, 0.3, 'sine', 0.05, 260); break; // the gust
+    case 'riposte': tone(1500, 0.07, 'square', 0.1, 900); tone(2100, 0.09, 'square', 0.07, 1400, 0.04); break;
+    case 'ambush': tone(120, 0.2, 'sawtooth', 0.15, 50); noise(0.18, 0.12, 500); tone(340, 0.14, 'square', 0.08, 180, 0.06); break;
     case 'win': [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.25, 'sine', 0.09, undefined, i * 0.12)); break;
     case 'lose': [330, 262, 196, 147].forEach((f, i) => tone(f, 0.3, 'triangle', 0.09, undefined, i * 0.16)); break;
   }

@@ -16,6 +16,13 @@ interface Threats {
   vaulter: boolean;
   ranger: boolean;
   flyer: boolean;
+  // ── Enemy Batch 2 ──
+  split: boolean; // Molt Wisp / Chitterling — a numbers problem, wants pierce
+  sponge: boolean; // Grovemaw Slug / Barkskin Marauder — status is useless, wants raw damage
+  backline: boolean; // Nightcap Assassin / Fen Wretch — the back row is contested
+  slug: boolean; // Grovemaw Slug specifically — wants Ironbark
+  marauder: boolean; // Barkskin Marauder specifically — wants Gale Fern
+  king: boolean; // The Hollow King — wants Prism Bud
 }
 function threatsOf(level: LevelDef): Threats {
   const set = new Set<EnemyKey>();
@@ -30,6 +37,12 @@ function threatsOf(level: LevelDef): Threats {
     vaulter: set.has('vaulter'),
     ranger: set.has('ranger'),
     flyer: set.has('drifter'),
+    split: set.has('wisp') || set.has('chitter'),
+    sponge: set.has('slug') || set.has('marauder'),
+    backline: set.has('nightcap') || set.has('wretch'),
+    slug: set.has('slug'),
+    marauder: set.has('marauder'),
+    king: set.has('hollowking'),
   };
 }
 
@@ -77,6 +90,15 @@ function botAct(s: GameState, th: Threats) {
   const glowCount = countAll(s, 'glowbulb');
   if (has('glowbulb') && glowCount < 4 && s.nectar >= 55) {
     for (const l of GLOW_ORDER) if (tryPlace(s, 'glowbulb', l, [0, 1])) return;
+  }
+  // Flora Batch 2: the answers that have to exist before the threat arrives.
+  // A Grovemaw Slug turns every status you own into armour, so raw burst first.
+  if (th.slug && has('ironbark') && countAll(s, 'ironbark') < 2 && s.nectar >= FLORA.ironbark.cost) {
+    for (const l of GLOW_ORDER) if (tryPlace(s, 'ironbark', l, [4, 3, 5])) return;
+  }
+  // The Hollow King wards a whole damage channel — one Prism Bud per contested lane.
+  if (th.king && has('prism') && countAll(s, 'prism') < 2 && s.nectar >= FLORA.prism.cost) {
+    for (const l of GLOW_ORDER) if (tryPlace(s, 'prism', l, [4, 3, 5])) return;
   }
   // Grub levels: get the splash answer down EARLY, while the board is still open —
   // a Stoneback ignores chip damage, and once it parks at a wall every tile that
@@ -139,10 +161,42 @@ function botAct(s: GameState, th: Threats) {
     if (th.husk && ground.some((e) => e.key === 'husk') && countFlora(s, l, (k) => k === 'bindweed') === 0) {
       if (tryPlace(s, 'bindweed', l, [3, 2, 4])) return;
     }
-    // backline coverage: Imps drop in and Thieves dig past — a Watchvine at the back
-    // shoots *backwards* at whatever got through; a Snaptrap eats the weak ones.
-    if (!boss && (th.imp || th.thief) && coversX(s, l, 2) === 0 && s.nectar >= 200 && attackers >= 1) {
+    // backline coverage: Imps drop in, Thieves dig past, and a Nightcap Assassin
+    // sprints clean over the wall to burst whatever is parked behind it. A
+    // Watchvine shoots *backwards* at whatever got through; a Snaptrap eats the weak.
+    if (!boss && (th.imp || th.thief || th.backline) && coversX(s, l, 2) === 0 && s.nectar >= 200 && attackers >= 1) {
       if (tryPlace(s, 'watchvine', l, [2, 1, 3])) return;
+    }
+    // Flora Batch 2, lane by lane.
+    if (ground.some((e) => e.key === 'slug') && countFlora(s, l, (k) => k === 'ironbark') === 0) {
+      if (tryPlace(s, 'ironbark', l, [4, 3, 5, 2])) return;
+    }
+    if (ground.some((e) => e.key === 'marauder' || e.key === 'husk') && countFlora(s, l, (k) => k === 'gale') === 0) {
+      if (tryPlace(s, 'gale', l, [3, 2, 4])) return;
+    }
+    if ((th.split || ground.some((e) => e.key === 'wisp' || e.key === 'chitter')) && splash === 0) {
+      if (tryPlace(s, 'emberlash', l, [4, 3, 5])) return;
+      if (tryPlace(s, 'needlereed', l, [4, 3, 5])) return;
+    }
+    // A Fen Wretch walking in is worth 120 damage to spring on — plant the trap ahead of it.
+    if (th.backline && ground.some((e) => e.key === 'wretch') && countFlora(s, l, (k) => k === 'ambush') === 0) {
+      if (tryPlace(s, 'ambush', l, [5, 6, 4])) return;
+    }
+    // Fen Wretch: its aura halves this lane's Nectar for as long as it lives, so
+    // it outranks everything else in the lane — pile damage on it first.
+    if (ground.some((e) => e.key === 'wretch') && attackers < 3) {
+      if (tryPlace(s, 'thornvine', l, [3, 2, 4, 5])) return;
+      if (tryPlace(s, splashKey, l, [3, 2, 4])) return;
+    }
+    // Grovemaw Slug / Barkskin Marauder: control Flora is eaten or shrugged off,
+    // so a lane holding one needs a raw-damage answer, not another Frostcap.
+    if (
+      ground.some((e) => e.key === 'slug' || e.key === 'marauder') &&
+      countFlora(s, l, (k) => k === 'thornvine' || k === 'cinderpod') < 2 &&
+      s.nectar >= 130
+    ) {
+      if (tryPlace(s, 'thornvine', l, [4, 3, 5, 2])) return;
+      if (tryPlace(s, 'cinderpod', l, [3, 2, 4])) return;
     }
     // A chewer parked at a wall with no splash in the lane takes no damage at all:
     // put a splash plant in the first free tile WEST of it that can still reach it.
@@ -201,7 +255,7 @@ function botAct(s: GameState, th: Threats) {
   }
 
   // 3) proactive backline insurance for catapult/burrow levels (all lanes)
-  if (th.imp || th.larva || th.thief) {
+  if (th.imp || th.larva || th.thief || th.backline) {
     for (const l of [2, 1, 3, 0, 4]) {
       if (coversX(s, l, 2) > 0 || s.nectar < 140) continue;
       // a shooter at the very back (col 0-1) is what catches a deep drop
@@ -253,7 +307,10 @@ for (const level of LEVELS) {
   allWin = allWin && s.status === 'won';
   const used = (k: FloraKey) => s.grid.flat().filter((f) => f?.key === k).length;
   const batch = (
-    ['cinderpod', 'deeproot', 'bulwark', 'snaptrap', 'watchvine', 'bindweed', 'lotus'] as FloraKey[]
+    [
+      'cinderpod', 'deeproot', 'bulwark', 'snaptrap', 'watchvine', 'bindweed', 'lotus',
+      'ironbark', 'emberlash', 'needlereed', 'gale', 'sentinelbloom', 'ambush', 'prism',
+    ] as FloraKey[]
   )
     .filter((k) => used(k) > 0)
     .map((k) => `${k}x${used(k)}`)

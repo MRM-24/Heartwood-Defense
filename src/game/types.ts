@@ -18,7 +18,15 @@ export type FloraKey =
   | 'snaptrap' // passive maw — devours anything under 100 HP that enters its tile
   | 'watchvine' // rearguard shooter — always hits the enemy furthest along the lane
   | 'bindweed' // root control — immobilises one enemy per cast, no damage
-  | 'lotus'; // economy — +40 Nectar and a tray-cooldown rebate
+  | 'lotus' // economy — +40 Nectar and a tray-cooldown rebate
+  // ── Flora Batch 2: answers to the Hollow Crown ──
+  | 'ironbark' // 80 raw dmg / 3s, single target — nothing for a Grovemaw Slug to eat
+  | 'emberlash' // continuous burn beam — no projectile, so no wasted shot on a split
+  | 'needlereed' // 5-shot spray spread across up to 3 enemies — no overkill on swarms
+  | 'gale' // knocks the leading enemy back 2 tiles — displacement, not a status
+  | 'sentinelbloom' // counter-strikes anything that sprints or leaps across its tile
+  | 'ambush' // inert until something enters its tile, then one huge hit
+  | 'prism'; // alternates damage channel every shot — always has an answer to a ward
 
 export type EnemyKey =
   | 'gnat'
@@ -35,7 +43,28 @@ export type EnemyKey =
   | 'ranger'
   | 'imp'
   | 'husk'
-  | 'thief';
+  | 'thief'
+  // ── Batch 2: the Hollow Crown ──
+  | 'wisp' // splits once below half HP — two smaller bodies, not one big one
+  | 'slug' // eats slow/DoT and turns it into damage reduction
+  | 'chitter' // arrives as a pack of four in a single lane slot
+  | 'marauder' // root-immune — Bindweed Snare finds nothing to hold
+  | 'nightcap' // sprints past the front two Flora to burst a back-row plant
+  | 'wretch' // lane-wide aura: Nectar plants ripen at half rate
+  | 'hollowking'; // world boss — three phases, and a damage type that switches off
+
+/**
+ * The damage channels a hit can arrive on. The Hollow King's phase-2 immunity
+ * shuts exactly one of these off for a few seconds at a time, which is what
+ * forces a mixed loadout mid-fight.
+ *
+ * `physical` — a single-target strike (Thornvine, Sunflower Sentinel,
+ *              Deeproot Sentry, Watchvine, Snaptrap's jaws).
+ * `splash`   — area damage (Cinderpod blast, Cactus volley, Frostcap spores).
+ * `poison`   — the damage-over-time channel. Wired end to end but DORMANT: no
+ *              Flora applies poison yet, so nothing currently produces it.
+ */
+export type DmgKind = 'physical' | 'splash' | 'poison';
 
 export interface FloraStats {
   key: FloraKey;
@@ -59,11 +88,27 @@ export interface FloraStats {
     rearmost?: boolean; // Watchvine / Bindweed: ignores facing — always picks the enemy furthest along the lane
     rootDur?: number; // Bindweed Snare: full immobilise duration (no damage)
     quiet?: boolean; // the shot deals no damage — don't spam hit fx on big bodies
+    // ── Enemy Batch 2: the DoT channel ──
+    // Fully wired through the engine (projectile → damage → tick → Grovemaw
+    // Slug → Hollow King immunity) but no Flora sets it yet. Adding a poison
+    // plant later needs no engine surgery — just these two numbers.
+    poisonDps?: number; // damage per second for the duration below
+    poisonDur?: number; // seconds the target stays poisoned
+    // ── Flora Batch 2 ──
+    beam?: boolean; // Emberlash Vine: continuous damage, no projectile, nothing to absorb
+    spray?: number; // Needle Reed: shots per volley
+    sprayTargets?: number; // …spread across at most this many enemies in the lane
+    altKind?: boolean; // Prism Bud: alternates physical ↔ splash every other shot
+    knockback?: number; // Gale Fern: tiles of displacement on hit
   };
   produce?: { amount: number; interval: number; boost?: boolean }; // boost: Nectar Lotus tray rebate
   // ── Flora Batch 1 special rules ──
   reach?: boolean; // Bulwark Bramble: absorbs Locust Ranger spines crossing (or aimed past) its tile
   snapKill?: number; // Snaptrap Root: instant kill threshold for enemies entering its tile
+  // ── Flora Batch 2 special rules ──
+  counterDash?: number; // Sentinel Bloom: damage to any dashing/leaping enemy crossing its tile
+  ambush?: number; // Ambush Fern: one-shot damage when an enemy enters its tile
+  ambushCd?: number; // …seconds before it can spring again
 }
 
 export interface EnemyStats {
@@ -87,6 +132,19 @@ export interface EnemyStats {
   smashWindup?: number; // Gargant Husk: wind-up seconds before a one-hit Flora kill
   grabEvery?: number; // Root Thief: seconds between snatch attempts
   escapeTime?: number; // Root Thief: seconds it takes to haul loot off the right edge
+  // ── Batch 2 special rules ──
+  splitBelow?: number; // Molt Wisp: HP fraction at which the one-time split fires
+  splitInto?: EnemyKey; // …and what it becomes (defaults to itself)
+  splitCount?: number; // …how many bodies replace it
+  splitHpFrac?: number; // …each body's HP as a fraction of the parent's maxHp
+  absorbStatus?: number; // Grovemaw Slug: damage reduction gained per point of control eaten
+  drCap?: number; // …hard ceiling on that reduction
+  packSize?: number; // Chitterling Pack: how many bodies arrive in one lane slot
+  rootImmune?: boolean; // Barkskin Marauder: root/immobilise does nothing to it
+  dashThrough?: number; // Nightcap Assassin: Flora it sprints past before bursting
+  nectarDrain?: number; // Fen Wretch: lane-wide multiplier applied to Nectar plant output
+  enrageFrac?: number; // Hollow King: HP fraction that triggers the enrage
+  immuneCycle?: { on: number; off: number }; // Hollow King: seconds immune / seconds open
   desc: string;
   counter: string;
 }
@@ -106,14 +164,14 @@ export interface WaveDef {
 
 export interface LevelDef {
   id: number; // 0..14 global
-  world: 1 | 2 | 3;
+  world: 1 | 2 | 3 | 4;
   idx: number; // 1..5 within world
   name: string;
   blurb: string;
   tip: string;
   hpMul: number; // global enemy HP scaling (trash only)
   waves: WaveDef[];
-  boss?: 'brute' | 'colossus';
+  boss?: 'brute' | 'colossus' | 'hollowking';
   addPool: EnemyKey[]; // colossus adds
 }
 
@@ -131,6 +189,12 @@ export interface FloraEnt {
   fired: number; // muzzle-flash timer
   prod: number; // production glow timer
   eatenBy: number | null; // id of enemy currently chewing (for anim)
+  withered: boolean; // a Fen Wretch in this lane is draining the harvest
+  // ── Flora Batch 2 ──
+  shotIdx: number; // Prism Bud: which channel the next shot goes out on
+  ambushT: number; // Ambush Fern: seconds until it can spring again (0 = armed)
+  struck: Set<number>; // Sentinel Bloom: enemies it has already counter-struck
+  beamId: number | null; // Emberlash Vine: enemy currently under the beam
 }
 
 export interface EnemyEnt {
@@ -166,6 +230,21 @@ export interface EnemyEnt {
   stunT: number; // Spore Imp: landing recovery (no move / no bite)
   // ── Flora Batch 1 mechanics ──
   rootUntil: number; // Bindweed Snare: fully immobilised until this time (no move, no bite, no wind-up)
+  // ── Enemy Batch 2 mechanics ──
+  canSplit: boolean; // Molt Wisp: the split is once per body — halves never split
+  poisonDps: number; // DoT channel: damage per second while poisoned (0 = clean)
+  poisonUntil: number; // …and for how much longer
+  drPct: number; // Grovemaw Slug: damage reduction from absorbed statuses
+  drUntil: number; // …expires here
+  dashT: number; // Nightcap Assassin: seconds of sprint remaining
+  dashUsed: boolean; // …the sprint is once per assassin
+  dashPassed: number; // …Flora tiles it has slipped past untouched
+  dashCol: number; // …last tile already counted (-1 = none)
+  immuneTo: DmgKind | null; // Hollow King: this damage channel is currently shut off
+  immuneT: number; // …seconds left in the current window
+  immuneOn: boolean; // …true while the window is an immunity, false in the gap
+  immuneIdx: number; // …which channel comes next (alternates every window)
+  enraged: boolean; // Hollow King phase 3: double attack speed, double damage taken
 }
 
 export interface Proj {
@@ -179,7 +258,7 @@ export interface Proj {
   aoe: boolean; // splash source — cracks Stoneback Grub slabs
   slowPct: number;
   slowDur: number;
-  kind: 'thorn' | 'spike' | 'frost' | 'ray' | 'cinder' | 'root' | 'bind';
+  kind: 'thorn' | 'spike' | 'frost' | 'ray' | 'cinder' | 'root' | 'bind' | 'bolt' | 'needle' | 'gale';
   hitIds: Set<number>; // pierce: enemies already struck
   // ── Flora Batch 1 ──
   dir: 1 | -1; // travel direction (Watchvine / Bindweed can fire backwards)
@@ -187,6 +266,11 @@ export interface Proj {
   underground: boolean; // travels beneath the surface — can strike a burrowed enemy
   rootDur: number; // 0 = no root; otherwise seconds of immobilise on hit
   targetId?: number; // locked-on shot: only this enemy can be struck
+  // ── Enemy Batch 2 ──
+  dmgKind: DmgKind; // which channel this hit arrives on (the Hollow King can shut one off)
+  poisonDps: number; // DoT applied on hit (dormant — no Flora produces it yet)
+  poisonDur: number;
+  knockback: number; // Gale Fern: tiles this hit shoves the victim back
 }
 
 // Enemy-fired ordnance (Locust Ranger thorn spines) — hunts one Flora.
@@ -231,7 +315,19 @@ export interface Fx {
     | 'root' // Bindweed Snare pinning an enemy
     | 'absorb' // Bulwark Bramble drinking a Locust spine
     | 'lotus' // Nectar Lotus tray rebate spark
-    | 'under'; // Deeproot Sentry round breaking ground
+    | 'under' // Deeproot Sentry round breaking ground
+    // ── Enemy Batch 2 ──
+    | 'molt' // Molt Wisp coming apart into two smaller bodies
+    | 'feed' // Grovemaw Slug swallowing a status effect
+    | 'shrug' // Barkskin Marauder throwing off a root
+    | 'dash' // Nightcap Assassin sprint blur
+    | 'strike' // Nightcap Assassin's single back-row burst
+    | 'ward' // Hollow King shutting a damage channel off (or a hit bouncing off it)
+    | 'enrage' // Hollow King phase 3
+    // ── Flora Batch 2 ──
+    | 'riposte' // Sentinel Bloom counter-striking a sprint or a leap
+    | 'ambush' // Ambush Fern springing
+    | 'gale'; // Gale Fern gust shoving something backwards
   lane: number;
   x: number; // col units (or grid-relative)
   ttl: number;
