@@ -33,13 +33,20 @@ binary assets**.
 - **Installable PWA** — a manifest, generated icons, an offline service worker
   and a first-visit install offer that remembers your answer. Installed, it runs
   full-screen with no browser chrome and no network.
+- **Full-bleed battlefield** — the stage covers the whole viewport on any
+  screen, with no letterbox bars. The 1080×600 field is the fixed play area
+  (spawns, grid and engine coordinates never change); whatever aspect is left
+  over becomes grown forest — canopy above, undergrowth below, treeline and a
+  blight-fog curtain at the margins — instead of black space. `src/utils/stageFit.ts`
+  does the maths (pure, table-tested) and the board renders the frame around it.
 - **Built for phones** — a mobile-first layout that follows how you hold it:
   portrait stacks status bar → board → seed tray in the thumb zone, landscape
-  moves the tray to a side rail so the field keeps the full (scarce) height.
-  44px+ touch targets, safe-area padding for notches and home indicators,
-  haptics on plant/reject, screen-wake lock during a battle, and no page
-  zoom/scroll fighting the grid. On desktop the whole stage (HUD + field)
-  scales as one framed unit that always fits the window.
+  moves the tray to a two-column side rail so the field keeps the full (scarce)
+  height and every seed stays visible without scrolling. 44px+ touch targets,
+  safe-area padding for notches and home indicators, haptics on plant/reject,
+  screen-wake lock during a battle, and no page zoom/scroll fighting the grid.
+  The phone HUD is never scaled — it stays at real CSS size around a board that
+  scales on its own — while on desktop HUD + field scale as one framed unit.
 - **A real main menu** — *Continue* drops you into the first level you have not
   cleared, *New Game* wipes the campaign behind a confirmation, *Level Select*
   opens the world map, and the sound toggle lives right on the title screen.
@@ -312,8 +319,9 @@ src/
 ├── index.css            # design tokens, safe areas, animation library, reduced-motion
 ├── components/
 │   ├── Board.tsx        # battle grid, enemies, projectiles, FX rendering
-│   ├── GameScreen.tsx   # fixed-tick game loop, input, scaling, overlays, wake lock
-│   ├── Hud.tsx          # nectar counter, flora tray, boss bar, controls (roomy + stacked + landscape rail)
+│   ├── GameScreen.tsx   # fixed-tick game loop, input, viewport measurement + stage fit, overlays, wake lock
+│   ├── Hud.tsx          # nectar counter, flora tray, boss bar, controls (roomy + stacked strip + landscape rail)
+│   ├── StageDecor.tsx   # the grown forest that fills the frame's margins (decorative, pointer-events: none)
 │   ├── InstallPrompt.tsx# first-visit install offer (native prompt or iOS walkthrough)
 │   ├── Screens.tsx      # title menu, world/level select, loadout, Field Guide + entry pages, end screens
 │   ├── ui.tsx           # buttons, icon buttons, bottom-sheet/dialog shell, focus trap
@@ -330,12 +338,15 @@ src/
 │   └── bgm.ts           # WebAudio procedural background music
 ├── hooks/
 │   └── useArrowNav.ts   # arrow-key/D-pad focus movement for menus
+└── utils/
+    ├── cn.ts            # className joiner
+    └── stageFit.ts      # pure full-bleed fit maths: scale, grown frame, margin split
 scripts/
 ├── sim.ts               # headless balance harness: a scripted player runs every level
 ├── novice.ts            # weaker scripted player for difficulty tuning
-├── test.ts              # engine smoke tests
+├── test.ts              # engine + stage-fit assertions
 ├── ssr.tsx              # render-to-string check for every screen
-├── dom.ts               # jsdom runtime smoke test (navigation, back stack, sounds, phone layout)
+├── dom.ts               # jsdom runtime smoke test (navigation, back stack, sounds, stage coverage)
 └── icons.mjs            # generates the PWA icons as PNGs with nothing but node:zlib
 public/
 ├── manifest.webmanifest # installable app metadata
@@ -361,10 +372,11 @@ All audio is generated with the Web Audio API at runtime:
 
 ```bash
 npm test           # everything below
-npm run test:engine  # 362 engine assertions (combat, waves, bosses, save data)
-npm run test:ui      # 61 render checks: every screen, both HUD layouts, guide states
+npm run test:engine  # 461 assertions (combat, waves, bosses, save data, stage fit)
+npm run test:ui      # 66 render checks: every screen, all HUD layouts, grown/flush frames
 npm run test:dom     # jsdom runtime smoke: navigation, Escape/back, click sounds,
-                     # focus movement, history mirroring, the phone battle layout
+                     # focus movement, history mirroring, and that the stage covers
+                     # its box on 1080p/ultrawide/4K/tall windows and on phones both ways
 ```
 
 `scripts/sim.ts` bundles a scripted average-skill player and plays all 25 levels

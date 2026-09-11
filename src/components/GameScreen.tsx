@@ -5,9 +5,10 @@ import { ENEMIES, FLORA } from '../game/data';
 import { haptic } from '../game/uiSound';
 import { setSfxMuted, sfxEvent } from '../game/sfx';
 import { starsForLevel, TICK, type FloraKey, type GameState, type LevelDef } from '../game/types';
-import Board, { STAGE_H, STAGE_W } from './Board';
+import Board from './Board';
 import Hud, { BossBar } from './Hud';
 import { GuideModal, LoseOverlay, PauseOverlay, WinOverlay } from './Screens';
+import { IDLE_FIT, STAGE_GAP, fitStage, sameFit, type StageFit } from '../utils/stageFit';
 import type { EnemyKey } from '../game/types';
 
 /** Portrait phones/tablets: stacked HUD — status strip above, seed tray below. */
@@ -21,6 +22,25 @@ const LANDSCAPE = '(orientation: landscape) and (max-height: 520px)';
 
 /** How the HUD is arranged around the board for the current viewport. */
 type LayoutMode = 'desktop' | 'stacked' | 'landscape';
+
+/**
+ * Every layout lives inside this inset: the notch, the home indicator and the
+ * rounded corners keep whatever margin they ask for, and no margin at all is
+ * wasted on a plain desktop window (skill §5 safe-area-awareness).
+ */
+const SAFE_INSET = {
+  paddingTop: 'max(6px, var(--safe-top))',
+  paddingRight: 'max(6px, var(--safe-right))',
+  paddingBottom: 'max(6px, var(--safe-bottom))',
+  paddingLeft: 'max(6px, var(--safe-left))',
+} as const;
+
+/**
+ * The page behind the stage. It is the same gradient the board frame opens
+ * with, so where the two meet — a rounded corner, a sub-pixel seam after a
+ * resize — the join is invisible instead of reading as a black edge.
+ */
+const VALE_BG = 'radial-gradient(120% 90% at 50% 0%, #16281a 0%, #0c1710 45%, #070d09 100%)';
 
 function layoutMode(): LayoutMode {
   if (typeof window === 'undefined') return 'desktop';
@@ -85,9 +105,12 @@ export default function GameScreen({ level, loadout, muted, guideFlora, guideEne
   const [paused, setPaused] = useState(false);
   const [guide, setGuide] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [scale, setScale] = useState(0.5);
-  /** Height of the unscaled desktop stage (HUD + gap + board), measured live. */
-  const [stageH, setStageH] = useState(STAGE_H + 118);
+  /**
+   * How the stage covers the room it is given: one uniform scale, the frame
+   * size that scale implies, and the forest margin that keeps the frame the
+   * same aspect as the viewport (see utils/stageFit).
+   */
+  const [fit, setFit] = useState<StageFit>(IDLE_FIT);
   const [mode, setMode] = useState<LayoutMode>(() => layoutMode());
   const reported = useRef(false);
   const speedRef = useRef(speed);
@@ -96,10 +119,10 @@ export default function GameScreen({ level, loadout, muted, guideFlora, guideEne
   pausedRef.current = paused;
   const guideRef = useRef(guide);
   guideRef.current = guide;
-  const boardAreaRef = useRef<HTMLDivElement>(null);
-  const trayRef = useRef<HTMLDivElement>(null);
-  /** The unscaled desktop stage column (HUD + board) — measured for the fit. */
-  const stageRef = useRef<HTMLDivElement>(null);
+  /** The box the stage has to cover — the viewport, minus safe areas and HUD. */
+  const areaRef = useRef<HTMLDivElement>(null);
+  /** Desktop only: the HUD row that shares the stage's single transform. */
+  const hudRef = useRef<HTMLDivElement>(null);
   const resolved = gs.status !== 'playing';
 
   useEffect(() => {
@@ -115,39 +138,32 @@ export default function GameScreen({ level, loadout, muted, guideFlora, guideEne
     return () => queries.forEach((mq) => mq.removeEventListener('change', on));
   }, []);
 
-  // Scale the board to whatever room the layout gives it.
+  /**
+   * Fit the stage to whatever room the layout gives it — measured, never
+   * guessed, and re-measured on every resize, rotation or HUD change (a boss
+   * banner landing in the portrait status strip costs the board height, so the
+   * board hears about it).
+   */
   useEffect(() => {
-    const el = boardAreaRef.current;
+    const el = areaRef.current;
     if (!el) return;
     const measure = () => {
-      const r = el.getBoundingClientRect();
-      if (r.width < 8 || r.height < 8) return;
-      if (mode === 'landscape') {
-        // The HUD lives in a strip above and a rail beside the board, both
-        // outside this element — the board gets the whole box to itself.
-        setScale(Math.max(0.15, Math.min(r.width / STAGE_W, r.height / STAGE_H, 1.35)));
-        return;
-      }
-      if (mode === 'stacked') {
-        // In the stacked layout the tray shares this column, so take its
-        // height (plus the row gap and the column's padding) out of the
-        // board's budget before scaling.
-        const tray = trayRef.current?.getBoundingClientRect().height ?? 0;
-        const room = Math.max(60, r.height - tray - 26);
-        setScale(Math.max(0.15, Math.min(r.width / STAGE_W, room / STAGE_H, 1.35)));
-        return;
-      }
-      // Desktop: HUD + board form one uniformly scaled stage. The stage
-      // column's offsetHeight ignores the transform, so it reports the true
-      // unscaled frame height — the whole stage then fits, never overflows.
-      const frameH = stageRef.current?.offsetHeight ?? 0;
-      const H = frameH > 64 ? frameH : STAGE_H + 118;
-      setStageH(H);
-      setScale(Math.max(0.15, Math.min(r.width / STAGE_W, (r.height - 16) / H, 1.35)));
+      // clientWidth/Height: the content box, i.e. the room inside the safe
+      // areas. Deliberately not the scaled stage's own size — measuring the
+      // thing we resize would be a feedback loop.
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (w < 8 || h < 8) return;
+      // Desktop scales HUD + field as one stage, so the HUD's height is part of
+      // the budget. On phones the HUD sits outside the transform and the board
+      // gets its whole box.
+      const chrome = mode === 'desktop' ? (hudRef.current?.offsetHeight ?? 0) + STAGE_GAP : 0;
+      const next = fitStage(w, h, chrome);
+      setFit((prev) => (sameFit(prev, next) ? prev : next));
     };
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    if (stageRef.current) ro.observe(stageRef.current);
+    if (hudRef.current) ro.observe(hudRef.current);
     measure();
     return () => ro.disconnect();
   }, [mode]);
@@ -336,15 +352,14 @@ export default function GameScreen({ level, loadout, muted, guideFlora, guideEne
     onContextMenu: (e: ReactMouseEvent) => e.preventDefault(),
   };
 
-  // Phone layouts scale the board on its own (the HUD is unscaled around it).
+  /* Phone layouts scale the board on their own (the HUD stays unscaled around
+     it). The reserved box is exactly the scaled frame, so the field can never
+     overflow the viewport — and because the frame is grown to the box's aspect
+     before it is scaled, there is no letterbox left over either. */
   const boardScaled = (
-    <div
-      className="stage-viewport relative shrink-0"
-      style={{ width: STAGE_W * scale, height: STAGE_H * scale }}
-      {...stagePointer}
-    >
-      <div className="absolute left-0 top-0 origin-top-left" style={{ transform: `scale(${scale})`, width: STAGE_W, height: STAGE_H }}>
-        <Board s={gs} alpha={alphaRef.current} onCell={handleCell} />
+    <div data-stage-box className="relative shrink-0" style={{ width: fit.boxW, height: fit.boxH }} {...stagePointer}>
+      <div className="absolute left-0 top-0 origin-top-left" style={{ transform: `scale(${fit.scale})` }}>
+        <Board s={gs} alpha={alphaRef.current} onCell={handleCell} pad={fit.pad} />
       </div>
     </div>
   );
@@ -352,8 +367,8 @@ export default function GameScreen({ level, loadout, muted, guideFlora, guideEne
   // Desktop scales HUD + board as one stage, so the board element itself must
   // stay unscaled — the wrapper below applies the single shared transform.
   const boardRaw = (
-    <div className="stage-viewport relative shrink-0" {...stagePointer}>
-      <Board s={gs} alpha={alphaRef.current} onCell={handleCell} />
+    <div className="relative shrink-0" {...stagePointer}>
+      <Board s={gs} alpha={alphaRef.current} onCell={handleCell} pad={fit.pad} />
     </div>
   );
 
@@ -366,43 +381,36 @@ export default function GameScreen({ level, loadout, muted, guideFlora, guideEne
       : null;
 
   return (
-    /* note: `stage-viewport` (touch-action: none) sits on the board only — the
-       HUD must keep native touch-action so the seed tray can scroll. */
-    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-[#070c08]">
-      {/* ambient page glow */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(90% 70% at 50% 0%, #122117 0%, transparent 60%)' }}
-      />
+    /* note: `stage-viewport` (touch-action: none) sits on the board frame only
+       — the HUD keeps native touch-action so the seed rack can scroll. */
+    <div className="relative h-dvh w-full overflow-hidden" style={{ background: VALE_BG }}>
       {mode === 'stacked' ? (
-        /* ── phone portrait: status strip on top, then the board and the seed
-              tray as one centred cluster — extra height is shared above and
-              below rather than left as a hole between them. ── */
-        <div
-          className="relative flex min-h-0 flex-1 flex-col"
-          style={{ marginLeft: 'var(--safe-left)', marginRight: 'var(--safe-right)' }}
-        >
-          <div className="shrink-0 px-2 pt-[max(0.5rem,var(--safe-top))]">{hudTop}</div>
-          <div ref={boardAreaRef} className="flex min-h-0 flex-1 flex-col justify-center gap-2 px-1 py-2">
-            <div className="flex shrink-0 justify-center">{boardScaled}</div>
-            <div ref={trayRef} className="shrink-0">
-              {hudTray}
-            </div>
+        /* ── phone portrait: status strip on top, seed rack at the bottom, and
+              the battlefield covering every pixel between them. Portrait is
+              width-bound, so the spare height goes into the frame's canopy and
+              undergrowth rather than into a gap. ── */
+        <div className="absolute inset-0 flex flex-col gap-1.5" style={SAFE_INSET}>
+          <div className="shrink-0">{hudTop}</div>
+          <div ref={areaRef} data-fit-area className="relative min-h-0 flex-1">
+            <div className="absolute inset-0 flex items-center justify-center">{boardScaled}</div>
           </div>
+          {/* The rack gets a slice of the spare height (capped, and back to
+              content size once it fits on one row at ≥560px): portrait is
+              width-bound, so this costs the field nothing and buys bigger
+              thumb targets. */}
+          <div className="h-[clamp(168px,26dvh,236px)] shrink-0 min-[560px]:h-auto">{hudTray}</div>
         </div>
       ) : mode === 'landscape' ? (
-        /* ── phone landscape: the tray becomes a side rail (real 76–92px touch
-              targets, unscaled) so the board keeps the full height, which is
-              the scarce dimension sideways. Status strip stays on top; the
-              boss banner overlays the field instead of eating its height. ── */
-        <div
-          className="relative flex min-h-0 flex-1 flex-col"
-          style={{ marginLeft: 'var(--safe-left)', marginRight: 'var(--safe-right)' }}
-        >
-          <div className="shrink-0 px-2 pb-1 pt-[max(0.5rem,var(--safe-top))]">{hudTop}</div>
-          <div className="flex min-h-0 flex-1 gap-2 px-1 pb-[max(0.5rem,var(--safe-bottom))]">
-            <div ref={boardAreaRef} className="relative flex min-h-0 flex-1 items-center justify-center">
-              {boardScaled}
+        /* ── phone landscape: the rack becomes a two-column rail beside the
+              board (every seed visible, nothing to scroll) and the status strip
+              goes slim, because sideways the scarce dimension is height and
+              every pixel of chrome comes off the field. The boss banner floats
+              over the frame instead of eating more of it. ── */
+        <div className="absolute inset-0 flex flex-col gap-1.5" style={SAFE_INSET}>
+          <div className="shrink-0">{hudTop}</div>
+          <div className="flex min-h-0 flex-1 gap-1.5">
+            <div ref={areaRef} data-fit-area className="relative min-h-0 min-w-0 flex-1">
+              <div className="absolute inset-0 flex items-center justify-center">{boardScaled}</div>
               {boss && (
                 <div className="pointer-events-none absolute inset-x-0 top-1 z-10 flex justify-center px-2">
                   <BossBar s={gs} />
@@ -416,19 +424,31 @@ export default function GameScreen({ level, loadout, muted, guideFlora, guideEne
                 </div>
               )}
             </div>
-            <div className="flex w-[104px] shrink-0 flex-col pt-1">{hudRail}</div>
+            <div className="w-[128px] shrink-0 sm:w-[140px]">{hudRail}</div>
           </div>
         </div>
       ) : (
-        /* ── desktop: one uniformly scaled stage, exactly as framed — the
-              reserved box matches the scaled content, so the field can never
-              overflow the viewport (the old layout scaled the board twice). ── */
-        <div ref={boardAreaRef} className="relative flex min-h-0 flex-1 items-center justify-center">
-          <div className="shrink-0" style={{ width: STAGE_W * scale, height: stageH * scale }}>
-            <div className="origin-top-left" style={{ transform: `scale(${scale})`, width: STAGE_W }}>
-              <div ref={stageRef} className="flex flex-col gap-3">
-                {hud}
-                {boardRaw}
+        /* ── desktop: HUD + field as one uniformly scaled stage that covers the
+              window edge to edge. The frame is grown to the window's aspect
+              first, so the stage is never letterboxed, and the reserved box
+              matches the scaled content exactly, so it can never overflow. ── */
+        <div className="absolute inset-0" style={SAFE_INSET}>
+          <div ref={areaRef} data-fit-area className="relative h-full w-full">
+            <div data-stage-box className="absolute left-0 top-0" style={{ width: fit.boxW, height: fit.boxH }}>
+              <div className="origin-top-left" style={{ transform: `scale(${fit.scale})`, width: fit.frameW }}>
+                <div className="flex flex-col" style={{ gap: STAGE_GAP }}>
+                  <div ref={hudRef} data-fit-chrome className="w-full shrink-0">
+                    {hud}
+                  </div>
+                  <div className="relative shrink-0">
+                    {boardRaw}
+                    {boss && (
+                      <div className="pointer-events-none absolute inset-x-0 top-2 z-[95] flex justify-center px-3">
+                        <BossBar s={gs} />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

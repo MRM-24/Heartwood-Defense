@@ -3,6 +3,15 @@ import { createGame, damageEnemy, levelEnemyIntel, placeFlora, shovelAt, spawnEn
 const SPAWN_X_EDGE = 9.4; // must match the engine's SPAWN_X
 import { ENEMIES, ENEMY_ORDER, FLORA, FLORA_ORDER, LEVELS, defaultLoadoutFor, discoveriesForLevel, enemyFirstLevel, enemyLevels, floraUnlockLevel, unlockedFloraFor } from '../src/game/data';
 import { DEFAULT_SAVE, codexEnemies, codexFlora, discoverLevel, levelsCleared, loadSave, recordWin, resetProgress, resumeLevelId, totalStars } from '../src/game/save';
+import {
+  IDLE_FIT,
+  MAX_STAGE_SCALE,
+  MIN_STAGE_SCALE,
+  STAGE_GAP,
+  STAGE_H,
+  STAGE_W,
+  fitStage,
+} from '../src/utils/stageFit';
 import type { EnemyKey, FloraKey, LevelDef } from '../src/game/types';
 
 let passed = 0, failed = 0;
@@ -1408,6 +1417,90 @@ function run(s: ReturnType<typeof createGame>, secs: number, each?: () => void) 
 
   // a corrupt/legacy save must not crash the title screen
   ok(loadSave().codex.flora.length === 0, 'loadSave() without localStorage falls back to an empty codex');
+}
+
+// ── Stage fit: the battle covers the screen, and never letterboxes ───────────
+{
+  console.log('Stage fit (full bleed)');
+
+  /**
+   * Each case is the box the stage has to cover, in CSS px, plus the unscaled
+   * HUD height that shares the stage (desktop only — on phones the HUD lives
+   * outside the transform, so chrome is 0). Numbers come from the real layouts:
+   * phone boxes are the viewport minus safe insets, status strip and rack.
+   */
+  const cases: [label: string, w: number, h: number, chrome: number][] = [
+    // desktop / laptop windows, HUD inside the stage
+    ['laptop 1366×768', 1354, 706, 112],
+    ['16:10 1280×800', 1268, 738, 112],
+    ['full HD 1920×1080', 1908, 1018, 112],
+    ['1440p 2560×1440', 2548, 1378, 112],
+    ['ultrawide 3440×1440', 3428, 1378, 112],
+    ['4K 3840×2160', 3828, 2098, 112],
+    ['tablet landscape 1024×768', 1012, 706, 112],
+    ['tall window 900×1400', 888, 1338, 112],
+    // phone landscape: slim strip above, two-column rack beside the board
+    ['phone landscape 667×375', 521, 313, 0],
+    ['phone landscape 844×390', 686, 328, 0],
+    ['phone landscape 932×430', 774, 368, 0],
+    // phone / tablet portrait: strip above, rack below
+    ['phone portrait 360×640', 348, 341, 0],
+    ['phone portrait 390×844', 378, 539, 0],
+    ['phone portrait 430×932', 418, 601, 0],
+    ['tablet portrait 768×1024', 756, 812, 0],
+  ];
+
+  for (const [label, w, h, chrome] of cases) {
+    const f = fitStage(w, h, chrome);
+    // 1. it covers the box: no black bar left over, nothing overflowing it
+    ok(
+      Math.abs(f.boxW - w) < 0.5 && Math.abs(f.boxH - h) < 0.5,
+      `${label}: stage covers ${w}×${h} exactly`,
+      `(got ${f.boxW.toFixed(1)}×${f.boxH.toFixed(1)})`,
+    );
+    // 2. the stage's aspect is the box's aspect — that is what "no letterbox" means
+    const stageAspect = f.frameW / (chrome + f.frameH);
+    ok(
+      Math.abs(stageAspect - w / h) < 0.02,
+      `${label}: stage aspect ${stageAspect.toFixed(3)} matches the box's ${(w / h).toFixed(3)}`,
+    );
+    // 3. the playfield is never cropped or squeezed out of existence
+    ok(f.frameW >= STAGE_W - 1e-6 && f.frameH >= STAGE_H - 1e-6, `${label}: frame keeps the whole 1080×600 field`);
+    // 4. one uniform scale, inside the sane band
+    ok(f.scale >= MIN_STAGE_SCALE && f.scale <= MAX_STAGE_SCALE + 1e-9, `${label}: scale ${f.scale.toFixed(3)} is inside the band`);
+    // 5. the margin is even, so the field stays centred in its frame
+    ok(
+      Math.abs(f.pad.left - f.pad.right) < 1e-6 && Math.abs(f.pad.top - f.pad.bottom) < 1e-6 && f.pad.left >= -1e-9,
+      `${label}: margin is centred (x ${f.pad.left.toFixed(0)}, y ${f.pad.top.toFixed(0)})`,
+    );
+    // 6. the scaled field plus its HUD still fits the box
+    ok(
+      STAGE_W * f.scale <= w + 0.5 && (chrome + STAGE_H) * f.scale <= h + 0.5,
+      `${label}: field + HUD fit inside the box at scale`,
+    );
+  }
+
+  // The old layout capped the desktop stage at 1.35 and letterboxed everything
+  // wider: 1440p left ~1.1k px of black across the window. Not any more.
+  const wide = fitStage(2548, 1378, 112);
+  ok(wide.boxW > 2540, `1440p fills the window width (${wide.boxW.toFixed(0)}px), no side bars`);
+  ok(wide.scale > 1.35, `1440p is no longer clamped to the old 1.35 ceiling (scale ${wide.scale.toFixed(2)})`);
+
+  // A landscape phone gets a full-bleed field, not a 575px board in a 726px box.
+  const phone = fitStage(686, 328, 0);
+  ok(phone.boxW > 685 && phone.boxH > 327, 'phone landscape: the frame covers the whole board area');
+  ok(phone.pad.left > 40, `phone landscape: the spare width becomes forest, not black (${phone.pad.left.toFixed(0)}px each side)`);
+
+  // The gap constant the desktop stage lays out with is the one the fit expects.
+  ok(STAGE_GAP === 12, `desktop HUD→field gap is ${STAGE_GAP}px`);
+
+  // Unmeasured / degenerate boxes fall back to the idle fit instead of NaN.
+  const idle = fitStage(0, 0);
+  ok(idle === IDLE_FIT, 'an unmeasured box returns the idle fit');
+  ok(fitStage(NaN, 800) === IDLE_FIT && fitStage(800, NaN) === IDLE_FIT, 'NaN measurements return the idle fit');
+  const tiny = fitStage(40, 24);
+  ok(Number.isFinite(tiny.scale) && tiny.frameW >= STAGE_W && tiny.frameH >= STAGE_H, 'an absurdly small box still yields a sane stage');
+  ok(Number.isFinite(fitStage(1920, 1080, NaN).scale), 'a NaN chrome height is ignored, not propagated');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
