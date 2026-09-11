@@ -120,7 +120,7 @@ volley shooter; **Needle Reed** spends its damage across a cluster instead of
 overkilling one body; **Sentinel Bloom** and **Ambush Fern** make the tile itself
 hostile to anything that gets past the wall; and **Prism Bud** is the direct
 answer to a boss that switches damage types, because it is never on one type for
-long. They unlock across World 4 (levels 16–20), one answer per level.
+long. They arrive with the Crown itself: World 4's finale unlocks all seven at once (levels 16–19 grant Batch-1 flora and the Ironbark Titan), so the King's court is answered with a full new tray rather than dribbles.
 
 **The DoT channel** — the engine has a full damage-over-time channel
 (`attack.poisonDps` / `poisonDur` → projectile → tick → Grovemaw Slug absorption →
