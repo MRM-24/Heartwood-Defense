@@ -2,7 +2,9 @@
 import { renderToString } from 'react-dom/server';
 import App from '../src/App';
 import Board from '../src/components/Board';
-import Hud from '../src/components/Hud';
+import Hud, { BossBar } from '../src/components/Hud';
+import StageDecor from '../src/components/StageDecor';
+import { STAGE_H, STAGE_W } from '../src/utils/stageFit';
 import { CodexEntry, ConfirmDialog, GuideModal, LevelSelect, LoadoutScreen, LoseOverlay, PauseOverlay, TitleScreen, WinOverlay, WorldSelect } from '../src/components/Screens';
 import InstallPrompt from '../src/components/InstallPrompt';
 import type { InstallState } from '../src/game/pwa';
@@ -220,6 +222,29 @@ s.waveAlertT = 2;
 s.warnWave = 3;
 s.shake = 0.3;
 check('Board(full combat)', () => renderToString(<Board s={s} alpha={0.5} onCell={() => 'none'} />));
+// the frame that fills a viewport whose aspect is not 1080:600
+check('Board(grown frame — forest margin)', () =>
+  assert(
+    'board-pad',
+    renderToString(
+      <Board s={s} alpha={0.5} onCell={() => 'none'} pad={{ top: 210, right: 346, bottom: 210, left: 346 }} />,
+    ),
+    ['data-stage-decor', `width:${STAGE_W + 692}px`, `height:${STAGE_H + 420}px`],
+  ),
+);
+check('Board(flush frame — no margin, no decor)', () => {
+  const html = renderToString(<Board s={s} alpha={0} onCell={() => 'none'} pad={{ top: 0, right: 0, bottom: 0, left: 0 }} />);
+  if (html.includes('data-stage-decor')) throw new Error('decor rendered for a flush frame');
+  return assert('board-flush', html, [`width:${STAGE_W}px`, `height:${STAGE_H}px`]);
+});
+check('StageDecor(all four margins)', () =>
+  assert(
+    'decor',
+    renderToString(<StageDecor pad={{ top: 300, right: 400, bottom: 300, left: 400 }} frameH={STAGE_H + 600} />),
+    ['aria-hidden="true"'],
+  ),
+);
+check('BossBar(warded + enraged)', () => renderToString(<BossBar s={s} />));
 // every Batch 2 sprite + state actually reached the output, not just "didn't throw"
 {
   const html = renderToString(<Board s={s} alpha={0.5} onCell={() => {}} />);
@@ -319,7 +344,7 @@ check('Hud(compact — phone layout)', () =>
     renderToString(
       <Hud s={s} speed={1} muted={false} compact interactive onSelect={() => {}} onShovel={() => {}} onSpeed={() => {}} onPause={() => {}} onMute={() => {}} />,
     ),
-    ['SEED TRAY', 'READY', 'DIG UP'],
+    ['SEED TRAY', 'READY', 'DIG UP', 'grid-cols-4'],
   ),
 );
 check('Hud(compact top strip)', () =>
@@ -337,7 +362,7 @@ check('Hud(compact rail — landscape phone tray)', () =>
     renderToString(
       <Hud s={s} speed={1} muted compact part="rail" interactive onSelect={() => {}} onShovel={() => {}} onSpeed={() => {}} onPause={() => {}} onMute={() => {}} />,
     ),
-    ['READY', 'DIG UP'],
+    ['READY', 'DIG UP', 'grid-cols-2'],
   ),
 );
 check('Hud(compact — placement hint)', () => {

@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ENEMIES, FLORA } from '../game/data';
 import type { PlaceResult } from '../game/engine';
 import { COLS, LANES, type EnemyEnt, type FloraEnt, type Fx, type GameState } from '../game/types';
+import { NO_PAD, STAGE_H, STAGE_W, type StagePad } from '../utils/stageFit';
+import StageDecor from './StageDecor';
 import { EnemySprite, EProjSprite, FloraSprite, HeartTree, ProjSprite, SnareGlyph } from './sprites';
 
-export const STAGE_W = 1080;
-export const STAGE_H = 600;
+/* The playfield's authored size lives in utils/stageFit (so the fit maths and
+   the renderer can never disagree); re-exported here for existing callers. */
+export { STAGE_H, STAGE_W };
 export const GRID_X = 150;
 export const GRID_Y = 22;
 export const CELL_W = 100;
@@ -74,12 +77,30 @@ interface Props {
   s: GameState;
   alpha: number;
   onCell: (lane: number, col: number) => PlaceResult | 'shovel' | 'none';
+  /**
+   * Decorative margin around the playfield, in stage px. The frame grows to
+   * `1080 + left + right` by `600 + top + bottom` so the stage can cover a
+   * viewport of any aspect without letterboxing; `StageDecor` paints that extra
+   * room as forest. Every game coordinate stays inside the 1080×600 playfield.
+   */
+  pad?: StagePad;
 }
 
-export default function Board({ s, alpha, onCell }: Props) {
+export default function Board({ s, alpha, onCell, pad = NO_PAD }: Props) {
   const [hover, setHover] = useState<{ lane: number; col: number } | null>(null);
   const [reject, setReject] = useState<{ lane: number; col: number; msg: string; n: number } | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+
+  const frameW = STAGE_W + pad.left + pad.right;
+  const frameH = STAGE_H + pad.top + pad.bottom;
+  /**
+   * Built once per pad size: the element's identity is stable between resizes,
+   * so React skips this whole decorative subtree on each of the 60fps renders.
+   */
+  const decor = useMemo(() => {
+    if (pad.left < 6 && pad.right < 6 && pad.top < 6 && pad.bottom < 6) return null;
+    return <StageDecor pad={pad} frameH={frameH} />;
+  }, [pad, frameH]);
 
   const cellFromEvent = useCallback((e: React.PointerEvent): { lane: number; col: number } | null => {
     const el = stageRef.current;
@@ -130,19 +151,18 @@ export default function Board({ s, alpha, onCell }: Props) {
 
   return (
     <div
-      ref={stageRef}
-      className={`relative touch-none select-none ${armed ? 'cursor-crosshair' : ''}`}
-      style={{ width: STAGE_W, height: STAGE_H }}
-      onPointerMove={handleMove}
-      onPointerLeave={handleLeave}
-      onPointerDown={handleDown}
-      onContextMenu={(e) => e.preventDefault()}
+      className="stage-viewport relative touch-none select-none overflow-hidden rounded-2xl border border-[#2b4430] bg-[#0c1710]"
+      style={{ width: frameW, height: frameH }}
     >
-      {/* ambient backdrop */}
-      <div className="absolute inset-0 overflow-hidden rounded-2xl border border-[#2b4430] bg-[#0c1710]">
+      {/* ambient backdrop — spans the whole frame, padding included, so the
+          stage never shows a seam where the playfield ends */}
+      <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 90% at 20% 0%, #16281a 0%, #0c1710 45%, #070d09 100%)' }} />
-        {/* blight glow from the east */}
-        <div className="absolute inset-y-0 right-0 w-[220px]" style={{ background: 'linear-gradient(to left, rgba(150,60,130,.22), transparent)' }} />
+        {/* blight glow from the east, anchored to the frame's edge, not the grid's */}
+        <div
+          className="absolute inset-y-0 right-0"
+          style={{ width: 220 + pad.right, background: 'linear-gradient(to left, rgba(150,60,130,.22), transparent)' }}
+        />
         {/* drifting spores */}
         {Array.from({ length: 9 }).map((_, i) => (
           <div
@@ -161,6 +181,39 @@ export default function Board({ s, alpha, onCell }: Props) {
         ))}
       </div>
 
+      {/* the forest that fills any margin around the playfield */}
+      {decor}
+
+      {/* vignette: holds the eye on the clearing, over the decor only */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ boxShadow: 'inset 0 0 110px rgba(4,9,6,.6), inset 0 0 34px rgba(4,9,6,.45)' }}
+      />
+
+      {/* the clearing reads a touch brighter than the trees around it */}
+      {decor && (
+        <div
+          className="pointer-events-none absolute"
+          style={{
+            left: pad.left,
+            top: pad.top,
+            width: STAGE_W,
+            height: STAGE_H,
+            background: 'radial-gradient(68% 62% at 42% 46%, rgba(150,225,160,.075), transparent 72%)',
+          }}
+        />
+      )}
+
+      {/* ── the playfield: every game coordinate lives in this 1080×600 box ── */}
+      <div
+        ref={stageRef}
+        className={`absolute ${armed ? 'cursor-crosshair' : ''}`}
+        style={{ left: pad.left, top: pad.top, width: STAGE_W, height: STAGE_H }}
+        onPointerMove={handleMove}
+        onPointerLeave={handleLeave}
+        onPointerDown={handleDown}
+        onContextMenu={(e) => e.preventDefault()}
+      >
       {/* inner shaken world */}
       <div className="absolute inset-0" style={{ transform: `translate(${shakeX}px, ${shakeY}px)` }}>
         {/* heart tree */}
@@ -369,6 +422,35 @@ export default function Board({ s, alpha, onCell }: Props) {
         {/* wave incoming banner */}
         {s.waveAlertT > 0 && s.status === 'playing' && s.warnWave >= 0 && (
           <WaveBanner final={s.warnWave === s.waveTotal - 1} wave={s.warnWave} total={s.waveTotal} t={s.waveAlertT} />
+        )}
+      </div>
+
+        {/* Blight fog over the east margin. Enemies are born just past the
+            playfield's right edge (x = 9.4 columns), so when the frame is
+            wider than the field they would otherwise pop into view in open
+            ground; the murk turns that into an entrance. Above the world
+            (z-75) but under the wave banner's own layer. */}
+        {pad.right > 12 && (
+          <div
+            className="pointer-events-none absolute z-[75]"
+            style={{ left: STAGE_W - 96, top: -pad.top, width: pad.right + 96, height: frameH }}
+          >
+            <div
+              className="absolute inset-0"
+              style={{ background: 'linear-gradient(to right, rgba(150,60,130,0) 0%, rgba(150,60,130,.12) 58%, rgba(112,42,104,.38) 100%)' }}
+            />
+            <div
+              className="anim-mist absolute inset-y-0 right-0 w-2/3"
+              style={{ background: 'radial-gradient(60% 42% at 68% 46%, rgba(195,143,184,.16), transparent 72%)' }}
+            />
+            <div
+              className="anim-mist absolute inset-y-0 right-0 w-1/3"
+              style={{
+                background: 'radial-gradient(50% 30% at 70% 68%, rgba(255,150,220,.1), transparent 70%)',
+                animationDelay: '-1.6s',
+              }}
+            />
+          </div>
         )}
       </div>
     </div>

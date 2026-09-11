@@ -13,6 +13,7 @@
  * play the game.
  */
 import { JSDOM } from 'jsdom';
+import { STAGE_GAP, STAGE_H, STAGE_W, fitStage } from '../src/utils/stageFit';
 
 // ── environment ─────────────────────────────────────────────────────────────
 const dom = new JSDOM(
@@ -44,11 +45,23 @@ const noopMql = (query: string) => ({
   dispatchEvent: () => false,
 });
 (window as unknown as { matchMedia: typeof noopMql }).matchMedia = noopMql;
+/* A ResizeObserver the test can fire: the battle screen measures its box from
+   a resize observation, so "the window changed shape" has to be reproducible
+   here or the fit maths would never run. */
+const liveObservers = new Set<{ cb: ResizeObserverCallback }>();
 class FakeResizeObserver {
+  cb: ResizeObserverCallback;
+  constructor(cb: ResizeObserverCallback) {
+    this.cb = cb;
+    liveObservers.add(this);
+  }
   observe() {}
   unobserve() {}
-  disconnect() {}
+  disconnect() {
+    liveObservers.delete(this);
+  }
 }
+const fireResize = () => liveObservers.forEach((o) => o.cb([], o as unknown as ResizeObserver));
 (window as unknown as { ResizeObserver: unknown }).ResizeObserver = FakeResizeObserver;
 Object.defineProperty(window.navigator, 'vibrate', { value: () => true, configurable: true });
 Object.defineProperty(window.navigator, 'serviceWorker', { value: undefined, configurable: true });
@@ -97,6 +110,30 @@ window.Element.prototype.getBoundingClientRect = function (this: Element) {
     toJSON: () => b,
   } as DOMRect;
 };
+
+/* The battle screen measures the box it has to cover (`[data-fit-area]`) and
+   the HUD row that shares its transform (`[data-fit-chrome]`). jsdom lays
+   nothing out, so hand it the numbers a real viewport would report — the
+   assertions below then check the layout reacts to them correctly. */
+const fitBox = { w: 1908, h: 1018, chrome: 102 };
+Object.defineProperty(window.HTMLElement.prototype, 'clientWidth', {
+  configurable: true,
+  get(this: HTMLElement) {
+    return this.hasAttribute('data-fit-area') ? fitBox.w : 0;
+  },
+});
+Object.defineProperty(window.HTMLElement.prototype, 'clientHeight', {
+  configurable: true,
+  get(this: HTMLElement) {
+    return this.hasAttribute('data-fit-area') ? fitBox.h : 0;
+  },
+});
+Object.defineProperty(window.HTMLElement.prototype, 'offsetHeight', {
+  configurable: true,
+  get(this: HTMLElement) {
+    return this.hasAttribute('data-fit-chrome') ? fitBox.chrome : 0;
+  },
+});
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -165,6 +202,16 @@ let failures = 0;
 function check(name: string, fn: () => void) {
   try {
     fn();
+    console.log(`  ✓ ${name}`);
+  } catch (e) {
+    failures++;
+    console.log(`  ✗ FAIL ${name}: ${(e as Error).message}`);
+  }
+}
+/** Same, for checks that have to let React flush a re-measure first. */
+async function checkAsync(name: string, fn: () => Promise<void>) {
+  try {
+    await fn();
     console.log(`  ✓ ${name}`);
   } catch (e) {
     failures++;
@@ -351,6 +398,84 @@ async function main() {
     assert(text().includes('BEGIN THE VIGIL'), 'system back did not return to the title');
   });
 
+  /**
+   * Resize the box the stage has to cover, and let the screen re-measure it.
+   */
+  const resizeStageBox = async (w: number, h: number, chrome = fitBox.chrome) => {
+    fitBox.w = w;
+    fitBox.h = h;
+    fitBox.chrome = chrome;
+    act(() => {
+      fireResize();
+    });
+    await tick(60);
+  };
+
+  /**
+   * The stage covers the box it was given, edge to edge: the reserved CSS box
+   * matches the measurement, the stage's aspect matches the box's (that is what
+   * "no letterbox" means), and the playfield inside is never cropped. Expected
+   * numbers come from the same pure `fitStage` the component calls, so this
+   * checks the wiring rather than a copy of the maths.
+   */
+  const stageCoversItsBox = (label: string, chrome = 0) => {
+    const expected = fitStage(fitBox.w, fitBox.h, chrome);
+    const pxOf = (style: string, prop: string) =>
+      Number(new RegExp(`${prop}:\\s*([\\d.]+)px`).exec(style)?.[1] ?? Number.NaN);
+
+    assert(window.document.querySelector('[data-fit-area]'), `${label}: nothing is measuring the stage box`);
+    const boxStyle = window.document.querySelector('[data-stage-box]')?.getAttribute('style') ?? '';
+    const boxW = pxOf(boxStyle, 'width');
+    const boxH = pxOf(boxStyle, 'height');
+    assert(Math.abs(boxW - expected.boxW) < 1, `${label}: reserved width ${boxW} != ${expected.boxW.toFixed(1)}`);
+    assert(Math.abs(boxH - expected.boxH) < 1, `${label}: reserved height ${boxH} != ${expected.boxH.toFixed(1)}`);
+    assert(
+      Math.abs(expected.boxW - fitBox.w) < 0.5 && Math.abs(expected.boxH - fitBox.h) < 0.5,
+      `${label}: the stage does not cover ${fitBox.w}×${fitBox.h}`,
+    );
+
+    const stageAspect = expected.frameW / (chrome + expected.frameH);
+    assert(
+      Math.abs(stageAspect - fitBox.w / fitBox.h) < 0.02,
+      `${label}: stage aspect ${stageAspect.toFixed(3)} != box aspect ${(fitBox.w / fitBox.h).toFixed(3)} — that gap is a letterbox`,
+    );
+
+    const frame = window.document.querySelector('.stage-viewport');
+    assert(frame, `${label}: board frame missing`);
+    const frameStyle = frame!.getAttribute('style') ?? '';
+    const frameW = pxOf(frameStyle, 'width');
+    const frameH = pxOf(frameStyle, 'height');
+    assert(Math.abs(frameW - expected.frameW) < 1, `${label}: frame width ${frameW} != ${expected.frameW.toFixed(1)}`);
+    assert(Math.abs(frameH - expected.frameH) < 1, `${label}: frame height ${frameH} != ${expected.frameH.toFixed(1)}`);
+    assert(
+      expected.frameW >= STAGE_W - 0.001 && expected.frameH >= STAGE_H - 0.001,
+      `${label}: the 1080×600 playfield would be cropped`,
+    );
+
+    // A grown frame means forest in the margin; a flush frame means none.
+    const decor = window.document.querySelector('[data-stage-decor]');
+    const grown = expected.pad.left > 6 || expected.pad.top > 6;
+    assert(!!decor === grown, `${label}: decor ${decor ? 'present' : 'absent'} but the margin is ${grown ? 'grown' : 'flush'}`);
+  };
+
+  /**
+   * The stage carries exactly one scale() transform, and it is never the board
+   * frame's own. Desktop scales HUD + frame together, phones scale the frame
+   * alone; either way `.stage-viewport` sizes itself (frame = playfield + the
+   * forest margin that fills the viewport's aspect) and stays untransformed.
+   * Regression: the board once carried its own scale() *and* sat inside the
+   * stage wrapper's scale() — the field rendered at scale² and overflowed.
+   */
+  const stageScaledOnce = (label: string) => {
+    const transforms = window.document.querySelectorAll('[style*="scale("]');
+    assert(transforms.length === 1, `${label}: expected exactly 1 stage transform, found ${transforms.length}`);
+    const board = window.document.querySelector('.stage-viewport');
+    assert(board, `${label}: board frame missing`);
+    const style = board!.getAttribute('style') ?? '';
+    assert(style.includes('width'), `${label}: the board frame must size itself`);
+    assert(!style.includes('scale('), `${label}: the board frame must not scale itself`);
+  };
+
   // ── the battle screen at desktop width ────────────────────────────────────
   check('desktop layout: into a battle', () => {
     click(byLabel('Level select'), 'LEVEL SELECT');
@@ -360,16 +485,37 @@ async function main() {
     assert(text().includes('PAUSE'), 'desktop HUD did not render');
   });
 
-  check('desktop layout: the stage is scaled exactly once', () => {
-    // Regression: the board used to carry its own scale() transform *and* sit
-    // inside the stage wrapper's scale() — the field rendered at scale² and
-    // overflowed fullscreen viewports.
-    const transforms = window.document.querySelectorAll('[style*="scale("]');
-    assert(transforms.length === 1, `expected exactly 1 stage transform, found ${transforms.length}`);
-    const board = window.document.querySelector('.stage-viewport');
-    assert(board, 'board wrapper missing');
-    assert(!board!.getAttribute('style'), 'the board wrapper must not scale itself in the desktop stage');
+  check('desktop layout: the stage is scaled exactly once', () => stageScaledOnce('desktop'));
+
+  await checkAsync('desktop layout: HUD + field cover the whole window', async () => {
+    // full HD minus the browser chrome; the HUD row shares the stage transform
+    await resizeStageBox(1908, 1018, 102);
+    stageCoversItsBox('desktop 1920×1080', fitBox.chrome + STAGE_GAP);
+    const expected = fitStage(1908, 1018, fitBox.chrome + STAGE_GAP);
+    assert(expected.scale > 1.35, `1080p should outgrow the old 1.35 ceiling, got ${expected.scale.toFixed(2)}`);
   });
+
+  await checkAsync('desktop layout: an ultrawide window gets forest, not black bars', async () => {
+    await resizeStageBox(3428, 1378);
+    stageCoversItsBox('ultrawide 3440×1440', fitBox.chrome + STAGE_GAP);
+    const expected = fitStage(3428, 1378, fitBox.chrome + STAGE_GAP);
+    assert(expected.pad.left > 100, `ultrawide margin should be deep forest, got ${expected.pad.left.toFixed(0)}px`);
+  });
+
+  await checkAsync('desktop layout: a 4K window is capped, and still covered', async () => {
+    await resizeStageBox(3828, 2098);
+    stageCoversItsBox('4K 3840×2160', fitBox.chrome + STAGE_GAP);
+  });
+
+  await checkAsync('desktop layout: a tall window fills top to bottom', async () => {
+    await resizeStageBox(888, 1338);
+    stageCoversItsBox('tall window 900×1400', fitBox.chrome + STAGE_GAP);
+    const expected = fitStage(888, 1338, fitBox.chrome + STAGE_GAP);
+    assert(expected.pad.top > 200, `a tall window should grow canopy above the field, got ${expected.pad.top.toFixed(0)}px`);
+  });
+
+  // back to a plain laptop window for the rest of the desktop pass
+  await resizeStageBox(1354, 706);
 
   check('desktop layout: Escape pauses', () => key('Escape'));
   await tick(60);
@@ -404,16 +550,22 @@ async function main() {
     assert(text().includes('DIG UP'), 'shovel missing from the landscape rail');
   });
 
-  check('landscape layout: the board scales itself, exactly once', () => {
-    // Phones scale the board alone (the HUD stays unscaled around it): the
-    // wrapper sizes itself and its inner div carries the one and only
-    // transform in the tree.
-    const board = window.document.querySelector('.stage-viewport');
-    assert(board, 'board wrapper missing');
-    assert((board!.getAttribute('style') ?? '').includes('width'), 'the landscape board must size itself');
-    assert((board!.firstElementChild?.getAttribute('style') ?? '').includes('scale('), 'the landscape board must carry its own scale');
-    const transforms = window.document.querySelectorAll('[style*="scale("]');
-    assert(transforms.length === 1, `expected exactly 1 board transform, found ${transforms.length}`);
+  check('landscape layout: the stage is scaled exactly once', () => stageScaledOnce('landscape'));
+
+  await checkAsync('landscape layout: the field covers the board area, no bars', async () => {
+    // iPhone 12/13/14 sideways: 844×390 minus safe insets, the slim status
+    // strip and the two-column seed rail — height is the scarce axis.
+    await resizeStageBox(686, 328);
+    stageCoversItsBox('phone landscape 844×390');
+    const expected = fitStage(686, 328);
+    assert(expected.pad.top < 1, `landscape phones are height-bound: no vertical margin expected, got ${expected.pad.top.toFixed(0)}px`);
+    assert(expected.frameH === STAGE_H, 'the playfield keeps its full height sideways');
+    assert(expected.pad.left > 40, `the spare width should become forest, got ${expected.pad.left.toFixed(0)}px`);
+  });
+
+  await checkAsync('landscape layout: a small phone still fills, top to bottom', async () => {
+    await resizeStageBox(521, 313);
+    stageCoversItsBox('phone landscape 667×375');
   });
 
   check('landscape layout: Escape pauses', () => key('Escape'));
@@ -450,6 +602,15 @@ async function main() {
     click(byLabel('TO BATTLE'), 'TO BATTLE');
     assert(text().includes('SEED TRAY'), 'compact HUD did not render');
     assert(text().includes('DIG UP'), 'shovel button missing from the phone tray');
+  });
+
+  await checkAsync('compact layout: the field covers the room between strip and rack', async () => {
+    // 390×844 portrait, minus safe insets, the status strip and the seed rack
+    await resizeStageBox(378, 539);
+    stageCoversItsBox('phone portrait 390×844');
+    const expected = fitStage(378, 539);
+    assert(expected.frameW === STAGE_W, 'portrait is width-bound: the frame stays 1080 wide');
+    assert(expected.pad.top > 100, `portrait spare height should become canopy/undergrowth, got ${expected.pad.top.toFixed(0)}px`);
   });
 
   check('compact layout: a Flora can be armed', () => {
