@@ -61,6 +61,81 @@ export const FLORA: Record<FloraKey, FloraStats> = {
     desc: 'The only Flora that can strike flying Blightspawn. 22 dmg every 1.5s, ground or sky.',
     attack: { dmg: 22, interval: 1.5, fly: true },
   },
+
+  // ── FLORA BATCH 1: THE ROOTBOUND DEPTHS ───────────────────────────────────
+  // Every one of these answers a specific Blightspawn from the enemy batch —
+  // none of them are "more damage". Where the enemy batch punishes a lazy habit,
+  // these give the habit a counter.
+  cinderpod: {
+    key: 'cinderpod',
+    name: 'Cinderpod',
+    cost: 125,
+    recharge: 10,
+    hp: 70,
+    role: 'Splash',
+    desc: 'Lobs an explosive seed every 2.5s: 25 dmg to the target AND every Blightspawn in the adjacent tile — real area damage, and area damage is what cracks a Stoneback Grub\u2019s slab.',
+    attack: { dmg: 25, interval: 2.5, aoe: true, splash: 1 },
+  },
+  deeproot: {
+    key: 'deeproot',
+    name: 'Deeproot Sentry',
+    cost: 150,
+    recharge: 12,
+    hp: 100,
+    role: 'Burrow Guard',
+    desc: 'Roots an ear through the soil. Fires underground every 2s for 16 dmg at anything tunnelling beneath its lane — the only Flora that can touch a burrowed Tunnel Larva. Above ground it is just a slow single-target shooter.',
+    attack: { dmg: 16, interval: 2, underground: true },
+  },
+  bulwark: {
+    key: 'bulwark',
+    name: 'Bulwark Bramble',
+    cost: 100,
+    recharge: 8,
+    hp: 350,
+    role: 'Shield Wall',
+    desc: 'A wall like Bramblewall, but with reach: its outer boughs snatch Locust Ranger spines out of the air. Any spine that crosses its tile — even one aimed at Flora further down the lane — is absorbed by the wall instead.',
+    reach: true,
+  },
+  snaptrap: {
+    key: 'snaptrap',
+    name: 'Snaptrap Root',
+    cost: 175,
+    recharge: 15,
+    hp: 90,
+    role: 'Trap',
+    desc: 'Passive jaws, no cooldown between bites: the instant any Blightspawn below 100 HP enters its tile it is swallowed whole. It does absolutely nothing to anything above that threshold — and stone slabs are too hard to bite.',
+    snapKill: 100,
+  },
+  watchvine: {
+    key: 'watchvine',
+    name: 'Watchvine',
+    cost: 150,
+    recharge: 12,
+    hp: 80,
+    role: 'Rearguard',
+    desc: 'Works in any tile, front or back. Never fires at the nearest foe — it always strikes the Blightspawn furthest along its lane, even one that has slipped behind it. 20 dmg every 1.5s. The answer to things that land behind your wall.',
+    attack: { dmg: 20, interval: 1.5, rearmost: true },
+  },
+  bindweed: {
+    key: 'bindweed',
+    name: 'Bindweed Snare',
+    cost: 125,
+    recharge: 10,
+    hp: 70,
+    role: 'Control',
+    desc: 'Every 4s it lashes the leading enemy in its lane and pins it for 3s — no damage, total immobilise: no walking, no biting, and a charging Gargant Husk has to start its smash wind-up over. Stacks beautifully with burst Flora.',
+    attack: { dmg: 0, interval: 4, rearmost: true, rootDur: 3, quiet: true },
+  },
+  lotus: {
+    key: 'lotus',
+    name: 'Nectar Lotus',
+    cost: 100,
+    recharge: 15,
+    hp: 60,
+    role: 'Economy',
+    desc: 'Ripens +40 Nectar every 15s. Each harvest also rebates the next Flora you plant within 5s — 1s off its tray recharge. A snowball for aggressive openings.',
+    produce: { amount: 40, interval: 15, boost: true },
+  },
 };
 
 export const FLORA_ORDER: FloraKey[] = [
@@ -70,6 +145,14 @@ export const FLORA_ORDER: FloraKey[] = [
   'cactus',
   'frostcap',
   'sentinel',
+  // ── FLORA BATCH 1 ──
+  'cinderpod',
+  'deeproot',
+  'bulwark',
+  'snaptrap',
+  'watchvine',
+  'bindweed',
+  'lotus',
 ];
 
 // ─── ENEMIES ────────────────────────────────────────────────────────────────
@@ -437,7 +520,7 @@ export const LEVELS: LevelDef[] = [
   {
     id: 10, world: 3, idx: 1, name: 'Over the Wall', hpMul: 1.4,
     blurb: 'The blight has watched your walls. It brought springs — and shovels.',
-    tip: 'NEW FOES: Mite Vaulters leap a lone wall — double up. Tunnel Larva burrow under columns 7–9 and surface at column 6: hold the mid-board.',
+    tip: 'NEW: Deeproot Sentry — the only Flora that can shoot a burrowed Larva — and Nectar Lotus, the vale\u2019s strongest economy. NEW FOES: Mite Vaulters leap a lone wall — double up; Tunnel Larva ride under columns 7–9 and surface at column 6. Hold the mid-board.',
     addPool: ['gnat', 'vaulter', 'larva'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
@@ -450,7 +533,7 @@ export const LEVELS: LevelDef[] = [
   {
     id: 11, world: 3, idx: 2, name: 'Shell Game', hpMul: 1.45,
     blurb: 'Stone and shell together. One wants burst. One wants splash. Bring both.',
-    tip: 'NEW FOE: the Stoneback Grub — its slab ignores single-target hits entirely. Cactus volleys and Frostcap spores crack stone; Thornvines finish the body. The Warden wants the opposite.',
+    tip: 'NEW: the Cinderpod — its blast hits the victim\u2019s tile and the one beside it, the reliable answer to stone. NEW FOE: the Stoneback Grub, whose slab ignores single-target hits entirely. Cactus volleys and Frostcap spores crack stone too; Thornvines finish the body. The Warden wants the opposite.',
     addPool: ['gnat', 'warden', 'grub'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
@@ -463,7 +546,7 @@ export const LEVELS: LevelDef[] = [
   {
     id: 12, world: 3, idx: 3, name: 'Sting From Afar', hpMul: 1.5,
     blurb: 'Spines from two tiles out, and worse raining from the sky.',
-    tip: 'NEW FOES: Locust Rangers snipe from range — give your cannons a wall to hide behind. Spore Imps are catapulted into the BACK half of a lane: keep a shooter in columns 1–5.',
+    tip: 'NEW: Bulwark Bramble, whose boughs swallow Ranger spines mid-flight, and Watchvine, which always strikes the enemy furthest along its lane — even one behind it. NEW FOES: Locust Rangers snipe from range; Spore Imps are catapulted into the BACK half of a lane.',
     addPool: ['gnat', 'ranger', 'imp'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
@@ -476,7 +559,7 @@ export const LEVELS: LevelDef[] = [
   {
     id: 13, world: 3, idx: 4, name: 'The Long Dark', hpMul: 1.55,
     blurb: 'Something that does not chew. Something that does not fight — only takes.',
-    tip: 'NEW FOES: the Gargant Husk SMASHES a plant dead in one 1.5s wind-up — kill it first, chill it to stall. Root Thieves snatch your most wounded Flora every 6s; kill one mid-heist and the plant drops back unharmed.',
+    tip: 'NEW: Snaptrap Root, which swallows anything under 100 HP that steps into its tile, and Bindweed Snare, which roots one foe per cast — including a Husk mid-wind-up. NEW FOES: the Gargant Husk SMASHES a plant dead in one 1.5s wind-up; Root Thieves snatch your most wounded Flora every 6s. Kill a thief mid-heist and the plant drops back unharmed.',
     addPool: ['gnat', 'husk', 'thief'],
     waves: [
       W(12, [G('gnat', 3, 1.6)]),
@@ -500,7 +583,8 @@ export const LEVELS: LevelDef[] = [
   },
 ];
 
-// Flora unlocks: level id at which the flora becomes available
+// Flora unlocks: level id at which the flora becomes available. Flora Batch 1
+// arrives with its enemies, one answer per level of the Rootbound Depths.
 export const FLORA_UNLOCKS: { level: number; flora: FloraKey[] }[] = [
   { level: 0, flora: ['thornvine', 'glowbulb', 'bramble'] },
   { level: 1, flora: ['cactus'] },
@@ -512,10 +596,10 @@ export const FLORA_UNLOCKS: { level: number; flora: FloraKey[] }[] = [
   { level: 7, flora: [] },
   { level: 8, flora: [] },
   { level: 9, flora: [] },
-  { level: 10, flora: [] },
-  { level: 11, flora: [] },
-  { level: 12, flora: [] },
-  { level: 13, flora: [] },
+  { level: 10, flora: ['deeproot', 'lotus'] }, // vs Tunnel Larva (+ economy for the push)
+  { level: 11, flora: ['cinderpod'] }, // vs Stoneback Grub
+  { level: 12, flora: ['bulwark', 'watchvine'] }, // vs Locust Ranger / Spore Imp
+  { level: 13, flora: ['snaptrap', 'bindweed'] }, // vs Root Thief & swarms / Gargant Husk
   { level: 14, flora: [] },
 ];
 
@@ -525,6 +609,46 @@ export function unlockedFloraFor(levelId: number): FloraKey[] {
     if (u.level <= levelId) out.push(...u.flora);
   }
   return out;
+}
+
+/** Flora that becomes available exactly at this level (for the "UNLOCKS …" tag). */
+export function floraUnlockedAt(levelId: number): FloraKey[] {
+  return FLORA_UNLOCKS.filter((u) => u.level === levelId).flatMap((u) => u.flora);
+}
+
+/** Every enemy key a level can field, waves + boss adds. */
+export function levelThreats(level: LevelDef): Set<EnemyKey> {
+  const set = new Set<EnemyKey>();
+  for (const w of level.waves) for (const g of w.groups) set.add(g.type);
+  for (const k of level.addPool) set.add(k);
+  return set;
+}
+
+/**
+ * Threat-aware starting loadout: the classic spine (economy → shooter → wall)
+ * plus unlocked hard counters for whatever this level actually fields.
+ */
+export function defaultLoadoutFor(level: LevelDef): FloraKey[] {
+  const unlocked = unlockedFloraFor(level.id);
+  const threats = levelThreats(level);
+  const out: FloraKey[] = [];
+  const add = (k: FloraKey) => {
+    if (unlocked.includes(k) && !out.includes(k) && out.length < LOADOUT_SLOTS) out.push(k);
+  };
+  add('glowbulb');
+  add('thornvine');
+  add('bramble');
+  // hard requirements first — the enemies nothing else can answer
+  if (threats.has('drifter') || threats.has('colossus')) add('sentinel');
+  if (threats.has('grub')) { add('cinderpod'); add('cactus'); }
+  if (threats.has('larva')) add('deeproot');
+  if (threats.has('ranger')) add('bulwark');
+  if (threats.has('imp') || threats.has('thief')) { add('watchvine'); add('snaptrap'); }
+  if (threats.has('husk')) add('bindweed');
+  if (threats.has('warden') || threats.has('beetle') || threats.has('skitter')) add('cactus');
+  add('frostcap');
+  for (const k of unlocked) add(k);
+  return out.slice(0, LOADOUT_SLOTS);
 }
 
 export const LOADOUT_SLOTS = 6;

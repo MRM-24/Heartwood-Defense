@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import GameScreen from './components/GameScreen';
 import { GuideModal, LevelSelect, LoadoutScreen, TitleScreen, WorldSelect } from './components/Screens';
-import { LEVELS, unlockedFloraFor } from './game/data';
+import { LEVELS, defaultLoadoutFor } from './game/data';
 import { setBgmMuted, startBgm } from './game/bgm';
 import { loadSave, recordWin, setMuted as persistMuted, type SaveData } from './game/save';
 import { setSfxMuted } from './game/sfx';
@@ -40,8 +40,8 @@ export default function App() {
   const hasSave = useMemo(() => save.maxLevel > 0 || Object.keys(save.stars).length > 0, [save]);
 
   const openLoadout = useCallback((level: LevelDef) => {
-    // smart default: everything unlocked, oldest first
-    setPicked(unlockedFloraFor(level.id).slice(0, 6));
+    // smart default: the classic spine plus unlocked hard counters for this level's intel
+    setPicked(defaultLoadoutFor(level));
     setScreen({ name: 'loadout', level });
   }, []);
 

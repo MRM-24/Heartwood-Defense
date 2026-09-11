@@ -200,6 +200,288 @@ function Sentinel() {
   );
 }
 
+// ─────────────────── FLORA BATCH 1: ANSWERS FROM THE DEPTHS ────────────────
+function Cinderpod() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <defs>
+        <radialGradient id="cp-pod" cx="0.42" cy="0.32" r="0.85">
+          <stop offset="0" stopColor="#ffbe72" />
+          <stop offset="0.45" stopColor="#d9602e" />
+          <stop offset="1" stopColor="#71241a" />
+        </radialGradient>
+      </defs>
+      <ellipse cx="50" cy="90" rx="25" ry="6.5" fill="#152b1d" />
+      <g className="anim-sway" style={{ transformOrigin: '50px 92px' }}>
+        {/* woody stem */}
+        <path d="M50 90 C 45 78 45 70 50 62" fill="none" stroke={O} strokeWidth="10" strokeLinecap="round" />
+        <path d="M50 90 C 45 78 45 70 50 62" fill="none" stroke="#6b5230" strokeWidth="6" strokeLinecap="round" />
+        {/* leaves */}
+        <path d="M48 76 C 36 75 29 68 27 59 C 38 61 46 67 48 76 Z" fill="#3fae6a" stroke={O} strokeWidth="2.3" strokeLinejoin="round" />
+        <path d="M51 70 C 62 68 69 61 71 52 C 60 54 52 60 51 70 Z" fill="#4cc97e" stroke={O} strokeWidth="2.3" strokeLinejoin="round" />
+        {/* the pod */}
+        <ellipse cx="50" cy="38" rx="25" ry="27" fill="url(#cp-pod)" stroke={O} strokeWidth="3.2" />
+        <path d="M50 12 C 36 14 27 24 28 38" fill="none" stroke="#ffdca0" strokeWidth="3" strokeLinecap="round" opacity="0.35" />
+        {/* glowing seams — the bang inside */}
+        <path d="M32 30 L 45 40 L 33 50 M 68 28 L 56 40 L 67 52 M 50 52 L 50 62" stroke="#ffd76a" strokeWidth="2.6" fill="none" strokeLinecap="round" className="anim-breathe" />
+        <path d="M30 24 L 26 18 M 70 22 L 75 15" stroke="#c9a86a" strokeWidth="3" strokeLinecap="round" />
+        {/* fuse */}
+        <path d="M50 11 C 47 5 52 3 49 -2" fill="none" stroke={O} strokeWidth="3.4" strokeLinecap="round" />
+        <path d="M50 11 C 47 5 52 3 49 -2" fill="none" stroke="#8a6f4c" strokeWidth="2" strokeLinecap="round" />
+        <g className="anim-twinkle">
+          <circle cx="48" cy="-4" r="4" fill="#ff9a3d" opacity="0.9" />
+          <circle cx="48" cy="-4" r="2" fill="#fff3c4" />
+        </g>
+        {/* wary eyes */}
+        <circle cx="41" cy="36" r="3.4" fill="#2a0f08" />
+        <circle cx="59" cy="36" r="3.4" fill="#2a0f08" />
+        <circle cx="42" cy="35" r="1.2" fill="#ffd6a8" />
+        <circle cx="60" cy="35" r="1.2" fill="#ffd6a8" />
+        <path d="M44 46 C 48 49 52 49 56 46" stroke="#2a0f08" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function DeeprootSentry() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <defs>
+        <linearGradient id="ds-stalk" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#2f8f5b" />
+          <stop offset="1" stopColor="#7fe0a8" />
+        </linearGradient>
+        <radialGradient id="ds-bulb" cx="0.45" cy="0.4" r="0.75">
+          <stop offset="0" stopColor="#f0ffe0" />
+          <stop offset="0.6" stopColor="#8fd8b8" />
+          <stop offset="1" stopColor="#3f8f74" />
+        </radialGradient>
+      </defs>
+      <ellipse cx="50" cy="90" rx="27" ry="7" fill="#152b1d" />
+      {/* disturbed soil */}
+      <path d="M22 90 C 32 82 68 82 78 90 Z" fill="#4a3a22" stroke={O} strokeWidth="2.4" strokeLinejoin="round" />
+      <g className="anim-sway-slow" style={{ transformOrigin: '50px 90px' }}>
+        {/* leafy crown */}
+        <path d="M50 88 C 47 74 48 62 50 54" fill="none" stroke={O} strokeWidth="10" strokeLinecap="round" />
+        <path d="M50 88 C 47 74 48 62 50 54" fill="none" stroke="url(#ds-stalk)" strokeWidth="6.4" strokeLinecap="round" />
+        <path d="M48 66 C 36 66 28 60 26 50 C 38 52 46 57 48 66 Z" fill="#4cc97e" stroke={O} strokeWidth="2.2" strokeLinejoin="round" />
+        <path d="M52 60 C 63 58 70 51 72 42 C 61 44 53 50 52 60 Z" fill="#3fae6a" stroke={O} strokeWidth="2.2" strokeLinejoin="round" />
+        {/* listening head — a downward funnel of roots */}
+        <path d="M50 54 C 38 50 32 40 34 30 C 42 33 49 40 50 48 C 51 40 58 33 66 30 C 68 40 62 50 50 54 Z" fill="#9fe8c0" stroke={O} strokeWidth="2.8" strokeLinejoin="round" />
+        <ellipse cx="50" cy="34" rx="9" ry="10" fill="url(#ds-bulb)" stroke={O} strokeWidth="2.6" />
+        <circle cx="50" cy="34" r="4" fill="#123526" />
+        <circle cx="48.6" cy="32.6" r="1.5" fill="#c8ffe8" />
+        {/* the ear beneath the soil: a glowing taproot */}
+        <g opacity="0.95">
+          <path d="M50 92 C 50 104 52 116 56 126 C 50 128 44 126 40 122 C 44 112 46 102 46 92 Z" fill="#7a6142" stroke={O} strokeWidth="2.8" strokeLinejoin="round" />
+          <path d="M40 108 C 32 110 26 116 24 124 M 60 110 C 68 112 74 118 76 126" stroke={O} strokeWidth="2.6" fill="none" strokeLinecap="round" />
+          <circle cx="56" cy="118" r="4.4" fill="#d9ffb0" className="anim-breathe" />
+          <circle cx="34" cy="118" r="3" fill="#a3f2a0" opacity="0.8" className="anim-breathe" />
+          <circle cx="70" cy="122" r="2.6" fill="#a3f2a0" opacity="0.7" />
+        </g>
+      </g>
+    </svg>
+  );
+}
+
+function BulwarkBramble({ hpFrac }: { hpFrac: number }) {
+  const cracked = hpFrac < 0.6;
+  const broken = hpFrac < 0.3;
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <ellipse cx="50" cy="92" rx="34" ry="7.5" fill="#152b1d" />
+      <g className="anim-settle" style={{ transformOrigin: '50px 92px' }}>
+        {/* the reach: boughs sweeping out to either side */}
+        <path d="M30 62 C 14 58 4 48 2 34" fill="none" stroke={O} strokeWidth="9" strokeLinecap="round" />
+        <path d="M30 62 C 14 58 4 48 2 34" fill="none" stroke="#6b4c2c" strokeWidth="5.6" strokeLinecap="round" />
+        <path d="M70 62 C 86 58 96 48 98 34" fill="none" stroke={O} strokeWidth="9" strokeLinecap="round" />
+        <path d="M70 62 C 86 58 96 48 98 34" fill="none" stroke="#6b4c2c" strokeWidth="5.6" strokeLinecap="round" />
+        {/* bark body */}
+        <path d="M22 88 C 16 62 18 38 30 22 C 42 8 60 8 72 22 C 84 38 86 64 78 88 Z" fill="#6a4a2c" stroke={O} strokeWidth="3.6" strokeLinejoin="round" />
+        <path d="M28 84 C 24 60 28 38 38 24" fill="none" stroke="#8a6540" strokeWidth="6.5" strokeLinecap="round" />
+        <path d="M72 84 C 76 58 72 36 60 24" fill="none" stroke="#8a6540" strokeWidth="6.5" strokeLinecap="round" />
+        {/* shield plates */}
+        <path d="M34 40 C 42 32 58 32 66 40 C 64 54 58 62 50 66 C 42 62 36 54 34 40 Z" fill="#5d7a4a" stroke={O} strokeWidth="2.6" strokeLinejoin="round" />
+        <path d="M50 36 L 50 66 M 38 42 C 46 46 54 46 62 42" stroke="#3f5a33" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.9" />
+        {/* thorn crown */}
+        {[[24, 40, -0.55], [76, 40, 0.55], [34, 18, -0.25], [66, 18, 0.25], [50, 10, 0]].map(([x, y, r], i) => (
+          <path key={i} d={`M${x} ${y} l 6 -13 l 3 13 Z`} fill="#d7f7c0" stroke={O} strokeWidth="1.8" transform={`rotate(${(r as number) * 32} ${x} ${y})`} strokeLinejoin="round" />
+        ))}
+        {/* moss + creeping light */}
+        <circle cx="42" cy="52" r="4" fill="#8fe07c" opacity="0.5" />
+        <circle cx="62" cy="74" r="3.2" fill="#8fe07c" opacity="0.4" />
+        {cracked && <path d="M40 24 L 45 42 L 38 54 L 44 70" fill="none" stroke="#20140a" strokeWidth="2.6" strokeLinecap="round" />}
+        {broken && <path d="M64 30 L 58 46 L 66 60 L 60 76 M32 60 L 38 72" fill="none" stroke="#20140a" strokeWidth="2.4" strokeLinecap="round" />}
+        {/* watchful face */}
+        <circle cx="43" cy="30" r="2.8" fill="#12200f" />
+        <circle cx="57" cy="30" r="2.8" fill="#12200f" />
+        <path d="M44 24 l 4 2 M56 24 l -4 2" stroke="#12200f" strokeWidth="1.8" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function SnaptrapRoot() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <defs>
+        <radialGradient id="st-maw" cx="0.5" cy="0.35" r="0.8">
+          <stop offset="0" stopColor="#ff9fb8" />
+          <stop offset="0.55" stopColor="#c7385f" />
+          <stop offset="1" stopColor="#6e1632" />
+        </radialGradient>
+      </defs>
+      <ellipse cx="50" cy="90" rx="28" ry="7" fill="#152b1d" />
+      <g className="anim-settle" style={{ transformOrigin: '50px 92px' }}>
+        {/* root buttress */}
+        <path d="M32 90 C 26 74 32 62 50 58 C 68 62 74 74 68 90 Z" fill="#5d4128" stroke={O} strokeWidth="3.2" strokeLinejoin="round" />
+        <path d="M38 88 C 34 76 38 68 50 66 C 62 68 66 76 62 88" fill="none" stroke="#7a5636" strokeWidth="4" strokeLinecap="round" />
+        {/* lower jaw */}
+        <path d="M18 52 C 30 40 70 40 82 52 C 72 62 62 66 50 66 C 38 66 28 62 18 52 Z" fill="url(#st-maw)" stroke={O} strokeWidth="3.2" strokeLinejoin="round" />
+        {/* upper jaw, hinged open */}
+        <g className="anim-nod" style={{ transformOrigin: '50px 46px' }}>
+          <path d="M16 48 C 26 22 68 16 84 40 C 72 34 58 34 50 40 C 40 34 26 38 16 48 Z" fill="#a42c50" stroke={O} strokeWidth="3.2" strokeLinejoin="round" />
+          {[[26, 34], [38, 27], [52, 25], [66, 29], [78, 37]].map(([x, y], i) => (
+            <path key={i} d={`M${x} ${y} l 7 10 l -9 1 Z`} fill="#fff3e0" stroke={O} strokeWidth="1.7" strokeLinejoin="round" />
+          ))}
+        </g>
+        {/* lower teeth */}
+        {[[26, 48], [38, 43], [50, 42], [62, 43], [74, 48]].map(([x, y], i) => (
+          <path key={i} d={`M${x} ${y} l -2 10 l 6 -8 Z`} fill="#fff3e0" stroke={O} strokeWidth="1.6" strokeLinejoin="round" />
+        ))}
+        {/* lure: a sweet-smelling pip */}
+        <path d="M50 62 C 48 54 50 48 54 44" fill="none" stroke={O} strokeWidth="2.6" strokeLinecap="round" />
+        <circle cx="55" cy="41" r="4.6" fill="#ffd76a" stroke={O} strokeWidth="2" className="anim-breathe" />
+        {/* half-lidded eyes */}
+        <circle cx="34" cy="72" r="3.2" fill="#2a0f18" />
+        <circle cx="66" cy="72" r="3.2" fill="#2a0f18" />
+        <path d="M30 68 l 8 1 M70 68 l -8 1" stroke="#2a0f18" strokeWidth="2" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function Watchvine() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <defs>
+        <linearGradient id="wv-stem" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#2f7f52" />
+          <stop offset="1" stopColor="#63d99a" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="90" rx="24" ry="6.5" fill="#152b1d" />
+      <g className="anim-sway-slow" style={{ transformOrigin: '50px 92px' }}>
+        {/* twin coil */}
+        <path d="M42 90 C 30 76 34 62 46 54 C 56 46 58 36 52 28" fill="none" stroke={O} strokeWidth="10" strokeLinecap="round" />
+        <path d="M42 90 C 30 76 34 62 46 54 C 56 46 58 36 52 28" fill="none" stroke="url(#wv-stem)" strokeWidth="6.4" strokeLinecap="round" />
+        <path d="M58 90 C 68 78 66 66 56 58" fill="none" stroke={O} strokeWidth="8" strokeLinecap="round" />
+        <path d="M58 90 C 68 78 66 66 56 58" fill="none" stroke="#3fae6a" strokeWidth="5" strokeLinecap="round" />
+        {/* leaves */}
+        <path d="M44 72 C 32 72 25 65 23 56 C 34 58 42 63 44 72 Z" fill="#4cc97e" stroke={O} strokeWidth="2.2" strokeLinejoin="round" />
+        <path d="M58 66 C 70 64 77 57 79 48 C 68 50 60 56 58 66 Z" fill="#3fae6a" stroke={O} strokeWidth="2.2" strokeLinejoin="round" />
+        {/* the watching eye — front and back */}
+        <path d="M30 26 C 30 12 44 4 58 6 C 74 8 84 20 82 32 C 80 44 66 50 52 47 C 38 44 30 38 30 26 Z" fill="#8fe07c" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+        <circle cx="56" cy="26" r="13" fill="#f6fff0" stroke={O} strokeWidth="2.6" />
+        <circle cx="52" cy="26" r="7.4" fill="#123526" />
+        <circle cx="50" cy="23.6" r="2.4" fill="#d9ffb0" />
+        <path d="M40 12 L 34 4 M 68 12 L 74 3" stroke={O} strokeWidth="2.2" strokeLinecap="round" />
+        {/* thorns that face both ways */}
+        <path d="M28 34 L 16 30 L 28 24 Z" fill="#eaffd9" stroke={O} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M84 30 L 96 32 L 84 38 Z" fill="#eaffd9" stroke={O} strokeWidth="1.8" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
+
+function BindweedSnare() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <defs>
+        <linearGradient id="bw-vine" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stopColor="#2f8f7a" />
+          <stop offset="1" stopColor="#8fe0c8" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="90" rx="25" ry="6.5" fill="#152b1d" />
+      <g className="anim-sway-slow" style={{ transformOrigin: '50px 92px' }}>
+        <path d="M50 90 C 42 80 40 70 46 62 C 52 54 62 50 68 42" fill="none" stroke={O} strokeWidth="9" strokeLinecap="round" />
+        <path d="M50 90 C 42 80 40 70 46 62 C 52 54 62 50 68 42" fill="none" stroke="url(#bw-vine)" strokeWidth="5.6" strokeLinecap="round" />
+        {/* the loop, coiled and ready */}
+        <g className="anim-spin-slow" style={{ transformOrigin: '46px 30px', animationDuration: '9s' }}>
+          <ellipse cx="46" cy="30" rx="20" ry="17" fill="none" stroke={O} strokeWidth="7" />
+          <ellipse cx="46" cy="30" rx="20" ry="17" fill="none" stroke="url(#bw-vine)" strokeWidth="4" />
+        </g>
+        {/* barbs along the loop */}
+        {[[26, 26], [34, 12], [54, 12], [66, 24], [64, 40], [30, 40]].map(([x, y], i) => (
+          <path key={i} d={`M${x} ${y} l -1 -9 l 6 7 Z`} fill="#eaffd9" stroke={O} strokeWidth="1.6" strokeLinejoin="round" />
+        ))}
+        <path d="M68 42 C 74 46 76 52 74 58" fill="none" stroke={O} strokeWidth="3" strokeLinecap="round" />
+        {/* leaves */}
+        <path d="M44 74 C 32 74 24 67 22 57 C 34 59 42 65 44 74 Z" fill="#4cc97e" stroke={O} strokeWidth="2.2" strokeLinejoin="round" />
+        <circle cx="46" cy="30" r="5.5" fill="#123526" />
+        <circle cx="44.4" cy="28.4" r="1.8" fill="#a8fff0" />
+      </g>
+    </svg>
+  );
+}
+
+function NectarLotus({ hpFrac }: { hpFrac: number }) {
+  const full = hpFrac > 0.5;
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <defs>
+        <radialGradient id="nl-pool" cx="0.5" cy="0.4" r="0.7">
+          <stop offset="0" stopColor="#fff8dd" />
+          <stop offset="0.55" stopColor="#ffd76a" />
+          <stop offset="1" stopColor="#e08f22" />
+        </radialGradient>
+        <linearGradient id="nl-petal" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffd7ef" />
+          <stop offset="1" stopColor="#d97fb4" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="91" rx="25" ry="6.5" fill="#152b1d" />
+      <g className="anim-sway-slow" style={{ transformOrigin: '50px 92px' }}>
+        <path d="M50 90 C 46 78 46 70 50 62" fill="none" stroke={O} strokeWidth="9" strokeLinecap="round" />
+        <path d="M50 90 C 46 78 46 70 50 62" fill="none" stroke="#3f9e68" strokeWidth="5.6" strokeLinecap="round" />
+        <path d="M48 76 C 36 76 28 69 26 59 C 38 61 46 67 48 76 Z" fill="#4cc97e" stroke={O} strokeWidth="2.2" strokeLinejoin="round" />
+        {/* petals — a broad open bloom */}
+        {Array.from({ length: 8 }).map((_, i) => {
+          const a = -180 + i * 22.5;
+          return (
+            <ellipse
+              key={i}
+              cx={50 + Math.cos((a * Math.PI) / 180) * 21}
+              cy={52 + Math.sin((a * Math.PI) / 180) * 13}
+              rx="15"
+              ry="7.5"
+              fill="url(#nl-petal)"
+              stroke={O}
+              strokeWidth="2.2"
+              transform={`rotate(${a + 90} ${50 + Math.cos((a * Math.PI) / 180) * 21} ${52 + Math.sin((a * Math.PI) / 180) * 13})`}
+            />
+          );
+        })}
+        {/* nectar bowl */}
+        <ellipse cx="50" cy="50" rx="17" ry="13" fill="url(#nl-pool)" stroke={O} strokeWidth="2.8" />
+        <ellipse cx="44" cy="45" rx="5" ry="3.4" fill="#fffdf0" opacity="0.85" transform="rotate(-22 44 45)" />
+        {/* rising droplets — the rebate, visibly ripening */}
+        {full && (
+          <g className="anim-twinkle">
+            <circle cx="34" cy="30" r="2.6" fill="#ffe9a8" />
+            <circle cx="66" cy="26" r="2.2" fill="#ffe9a8" />
+            <circle cx="50" cy="18" r="1.9" fill="#fff6cf" />
+          </g>
+        )}
+        <circle cx="45" cy="60" r="2.6" fill="#2a1d08" />
+        <circle cx="55" cy="60" r="2.6" fill="#2a1d08" />
+        <path d="M46 66 C 49 68 51 68 54 66" stroke="#2a1d08" strokeWidth="2" fill="none" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
 export function FloraSprite({ k, hpFrac = 1 }: { k: FloraKey; hpFrac?: number }) {
   switch (k) {
     case 'thornvine': return <Thornvine />;
@@ -208,6 +490,13 @@ export function FloraSprite({ k, hpFrac = 1 }: { k: FloraKey; hpFrac?: number })
     case 'cactus': return <Cactus />;
     case 'frostcap': return <Frostcap />;
     case 'sentinel': return <Sentinel />;
+    case 'cinderpod': return <Cinderpod />;
+    case 'deeproot': return <DeeprootSentry />;
+    case 'bulwark': return <BulwarkBramble hpFrac={hpFrac} />;
+    case 'snaptrap': return <SnaptrapRoot />;
+    case 'watchvine': return <Watchvine />;
+    case 'bindweed': return <BindweedSnare />;
+    case 'lotus': return <NectarLotus hpFrac={hpFrac} />;
   }
 }
 
@@ -746,7 +1035,33 @@ export function EProjSprite() {
   );
 }
 
-export function ProjSprite({ kind }: { kind: 'thorn' | 'spike' | 'frost' | 'ray' }) {
+export function ProjSprite({ kind }: { kind: 'thorn' | 'spike' | 'frost' | 'ray' | 'cinder' | 'root' | 'bind' }) {
+  if (kind === 'cinder')
+    return (
+      <svg viewBox="0 0 32 26" className="h-full w-full overflow-visible">
+        <path d="M6 13 L -2 13" stroke="#ff9a3d" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
+        <ellipse cx="19" cy="13" rx="10" ry="9" fill="#d9602e" stroke={O2} strokeWidth="1.8" />
+        <path d="M13 8 L 20 13 L 13 18 M 22 7 L 18 13 L 23 19" stroke="#ffd76a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+        <path d="M28 13 C 30 10 30 8 29 6" stroke="#8a6f4c" strokeWidth="2" fill="none" strokeLinecap="round" />
+        <circle cx="29" cy="5" r="2.6" fill="#fff3c4" />
+      </svg>
+    );
+  if (kind === 'root')
+    return (
+      <svg viewBox="0 0 40 14" className="h-full w-full overflow-visible">
+        <path d="M4 7 L 30 2 L 38 7 L 30 12 Z" fill="#c9b878" stroke={O2} strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M2 7 L 14 7" stroke="#8a6f4c" strokeWidth="2.6" strokeLinecap="round" opacity="0.9" />
+        <path d="M22 2 C 24 5 24 9 22 12" stroke="#6e5a34" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      </svg>
+    );
+  if (kind === 'bind')
+    return (
+      <svg viewBox="0 0 32 18" className="h-full w-full overflow-visible">
+        <path d="M2 9 C 8 3 14 15 20 9 C 24 5 27 5 30 7" fill="none" stroke={O2} strokeWidth="5" strokeLinecap="round" />
+        <path d="M2 9 C 8 3 14 15 20 9 C 24 5 27 5 30 7" fill="none" stroke="#7fe0c0" strokeWidth="3" strokeLinecap="round" />
+        <path d="M10 4 l -1 -4 l 4 3 M 24 14 l 0 4 l 3 -3" stroke="#eaffd9" strokeWidth="1.6" strokeLinejoin="round" />
+      </svg>
+    );
   if (kind === 'thorn')
     return (
       <svg viewBox="0 0 40 14" className="h-full w-full overflow-visible">

@@ -37,6 +37,14 @@ const FLORA_GLOW: Record<string, string> = {
   cactus: 'rgba(110,230,180,.4)',
   frostcap: 'rgba(140,215,255,.5)',
   sentinel: 'rgba(255,207,77,.5)',
+  // ── Flora Batch 1 ──
+  cinderpod: 'rgba(255,140,60,.5)',
+  deeproot: 'rgba(160,240,200,.45)',
+  bulwark: 'rgba(180,210,120,.35)',
+  snaptrap: 'rgba(255,110,150,.45)',
+  watchvine: 'rgba(150,255,200,.45)',
+  bindweed: 'rgba(130,230,200,.45)',
+  lotus: 'rgba(255,190,225,.5)',
 };
 
 interface Props {
@@ -231,25 +239,36 @@ export default function Board({ s, alpha, onCell }: Props) {
 
         {/* enemies */}
         {s.enemies.map((e) => (
-          <EnemyView key={e.id} e={e} alpha={alpha} />
+          <EnemyView key={e.id} e={e} alpha={alpha} now={s.t} />
         ))}
 
         {/* projectiles */}
         {s.projs.map((p) => {
           const x = p.prevX + (p.x - p.prevX) * alpha;
-          const w = p.kind === 'frost' ? 20 : p.kind === 'ray' ? 34 : 30;
-          const h = p.kind === 'frost' ? 20 : 12;
+          const w = p.kind === 'frost' ? 20 : p.kind === 'ray' ? 34 : p.kind === 'cinder' ? 30 : p.kind === 'bind' ? 32 : 30;
+          const h = p.kind === 'frost' ? 20 : p.kind === 'cinder' ? 24 : p.kind === 'bind' ? 18 : 12;
+          const glow =
+            p.kind === 'frost' ? '#9fdcff'
+            : p.kind === 'ray' ? '#ffd76a'
+            : p.kind === 'cinder' ? '#ff9a3d'
+            : p.kind === 'root' ? '#c9a86a'
+            : p.kind === 'bind' ? '#7fe0c0'
+            : '#a4ffb8';
+          // Deeproot rounds travel beneath the turf; Watchvine/Bindweed can fire west.
+          const sink = p.underground ? 34 : 0;
           return (
             <div
               key={p.id}
               className="pointer-events-none absolute"
               style={{
                 left: px(x) - w / 2,
-                top: laneY(p.lane) + CELL_H / 2 - h / 2 - 6,
+                top: laneY(p.lane) + CELL_H / 2 - h / 2 - 6 + sink,
                 width: w,
                 height: h,
-                zIndex: 60,
-                filter: `drop-shadow(0 0 6px ${p.kind === 'frost' ? '#9fdcff' : p.kind === 'ray' ? '#ffd76a' : '#a4ffb8'})`,
+                zIndex: p.underground ? 14 : 60,
+                opacity: p.underground ? 0.9 : 1,
+                transform: p.dir === -1 ? 'scaleX(-1)' : undefined,
+                filter: `drop-shadow(0 0 6px ${glow})`,
               }}
             >
               <ProjSprite kind={p.kind} />
@@ -326,6 +345,8 @@ function FloraView({ f }: { f: FloraEnt }) {
       )}
       {/* production halo */}
       {f.prod > 0 && <div className="anim-ringburst absolute rounded-full border-2 border-[#ffd76a]" style={{ left: 6, top: 4, width: 76, height: 76 }} />}
+      {/* snaptrap jaws shimmer, ready for something small */}
+      {f.key === 'snaptrap' && <div className="anim-breathe absolute rounded-full border border-[#ff9fb8]/50" style={{ left: 10, top: 4, width: 68, height: 84 }} />}
       {/* hp bar */}
       {hurt && (
         <div className="absolute" style={{ left: 12, bottom: -4, width: 64, height: 5, background: 'rgba(10,16,12,.8)', borderRadius: 3, border: '1px solid rgba(0,0,0,.5)' }}>
@@ -342,7 +363,7 @@ function FloraView({ f }: { f: FloraEnt }) {
   );
 }
 
-function EnemyView({ e, alpha }: { e: EnemyEnt; alpha: number }) {
+function EnemyView({ e, alpha, now }: { e: EnemyEnt; alpha: number; now: number }) {
   const def = ENEMIES[e.key];
   const ex = e.prevX + (e.x - e.prevX) * alpha;
   const scale = def.scale;
@@ -354,6 +375,7 @@ function EnemyView({ e, alpha }: { e: EnemyEnt; alpha: number }) {
   const arcLift = jumpProg > 0 ? Math.sin(jumpProg * Math.PI) * 52 : 0;
   const windupFrac = def.smashWindup ? Math.min(1, e.windup / def.smashWindup) : 0;
   const fleeing = !!e.carrying; // Root Thief running loot home
+  const rooted = e.rootUntil > now; // Bindweed Snare has it pinned
   return (
     <div
       className="pointer-events-none absolute"
@@ -366,7 +388,7 @@ function EnemyView({ e, alpha }: { e: EnemyEnt; alpha: number }) {
           e.burrowed
             ? 12 + e.lane // the dirt mound slides beneath everything
             : 24 + e.lane + (def.flying ? 30 : 0),
-        filter: `drop-shadow(0 0 8px ${ENEMY_GLOW[e.key]}) ${e.hitFlash > 0 ? 'brightness(2) saturate(1.6)' : ''} ${slowed ? 'drop-shadow(0 0 6px rgba(140,215,255,.8)) hue-rotate(-12deg)' : ''} ${e.stunT > 0 ? 'saturate(.6) brightness(.85)' : ''}`,
+        filter: `drop-shadow(0 0 8px ${ENEMY_GLOW[e.key]}) ${e.hitFlash > 0 ? 'brightness(2) saturate(1.6)' : ''} ${slowed ? 'drop-shadow(0 0 6px rgba(140,215,255,.8)) hue-rotate(-12deg)' : ''} ${e.stunT > 0 ? 'saturate(.6) brightness(.85)' : ''} ${rooted ? 'drop-shadow(0 0 8px rgba(127,224,192,.9))' : ''}`,
         transform: `${e.chewing ? 'translateX(-2px) rotate(-1.5deg)' : ''} ${e.jumpT > 0 ? `rotate(${jumpProg * -14}deg)` : ''} ${fleeing ? 'scaleX(-1)' : ''}`,
         opacity: e.burrowed ? 0.85 : 1,
       }}
@@ -383,6 +405,16 @@ function EnemyView({ e, alpha }: { e: EnemyEnt; alpha: number }) {
           carrying={fleeing}
         />
       </div>
+      {/* Bindweed Snare: living ropes pinning it to the ground */}
+      {rooted && (
+        <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+          <path d="M6 96 C 24 82 32 68 36 54" fill="none" stroke="#2f8f7a" strokeWidth="6" strokeLinecap="round" />
+          <path d="M94 96 C 76 82 68 68 64 54" fill="none" stroke="#2f8f7a" strokeWidth="6" strokeLinecap="round" />
+          <path d="M50 98 C 46 82 46 72 50 62" fill="none" stroke="#63d99a" strokeWidth="5" strokeLinecap="round" />
+          <path d="M20 86 l -8 -10 M 80 86 l 8 -10 M 50 88 l -3 -12" stroke="#eaffd9" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="50" cy="52" r="46" fill="none" stroke="#7fe0c0" strokeWidth="3" opacity="0.45" className="anim-pulse-ring" />
+        </svg>
+      )}
       {/* the hauled Flora, held aloft */}
       {fleeing && e.carrying && (
         <div
@@ -613,6 +645,84 @@ function FxView({ fx }: { fx: Fx }) {
         <svg viewBox="0 0 28 28" width={28} height={28} className="anim-pop">
           <path d="M14 3 L 18 12 L 27 14 L 18 16 L 14 25 L 10 16 L 1 14 L 10 12 Z" fill="#fff3c4" stroke="#0d1b13" strokeWidth="1.6" />
         </svg>
+      </div>
+    );
+  }
+  // ── Flora Batch 1 fx ──
+  if (fx.kind === 'boom') {
+    // Cinderpod blast: a full tile of fire, in-lane
+    return (
+      <div className="pointer-events-none absolute z-[66]" style={{ left: px(fx.x) - 52, top: laneY(fx.lane) + CELL_H / 2 - 52, width: 104, height: 104 }}>
+        <div className="anim-shockwave absolute inset-0 rounded-full border-4 border-[#ff9a3d]" style={{ background: 'radial-gradient(circle, rgba(255,215,106,.55) 0%, rgba(217,96,46,.35) 45%, transparent 72%)' }} />
+        {Array.from({ length: 9 }).map((_, i) => {
+          const a = (i / 9) * Math.PI * 2 + 0.3;
+          return (
+            <div
+              key={i}
+              className="anim-burst absolute rounded-full"
+              style={{ width: 9 + (i % 3) * 4, height: 9 + (i % 3) * 4, left: 47, top: 47, background: i % 2 ? '#ffd76a' : '#ff7a3d', ['--bx' as string]: `${Math.cos(a) * 46}px`, ['--by' as string]: `${Math.sin(a) * 32}px` }}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+  if (fx.kind === 'snap') {
+    return (
+      <div className="pointer-events-none absolute z-[70]" style={{ left: px(fx.x) - 34, top: laneY(fx.lane) + CELL_H / 2 - 34, width: 68, height: 68 }}>
+        <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+          <path d="M4 52 C 18 34 40 30 50 40 C 60 30 82 34 96 52 C 80 46 62 46 50 54 C 38 46 20 46 4 52 Z" fill="#c7385f" stroke="#0a140f" strokeWidth="3" strokeLinejoin="round" className="anim-pop" />
+          <path d="M22 44 l 4 9 l -9 -1 Z M 44 38 l 3 9 l -9 -2 Z M 56 38 l 6 7 l -9 2 Z M 78 44 l 9 8 l -9 1 Z" fill="#fff3e0" stroke="#0a140f" strokeWidth="2" strokeLinejoin="round" />
+        </svg>
+        <div className="anim-floatup absolute -top-2 left-1/2 -translate-x-1/2 font-ui text-[15px] font-black" style={{ color: '#ff9fb8', textShadow: '0 0 10px rgba(199,56,95,.9), 0 2px 2px #000' }}>
+          SNAP!
+        </div>
+      </div>
+    );
+  }
+  if (fx.kind === 'root') {
+    return (
+      <div className="pointer-events-none absolute z-[64]" style={{ left: px(fx.x) - 30, top: laneY(fx.lane) + CELL_H / 2 - 34 }}>
+        <svg viewBox="0 0 60 68" width={60} height={68} className="overflow-visible">
+          <path d="M30 66 C 12 56 8 40 14 22" fill="none" stroke="#2f8f7a" strokeWidth="5" strokeLinecap="round" className="anim-pop" />
+          <path d="M30 66 C 48 56 52 40 46 22" fill="none" stroke="#2f8f7a" strokeWidth="5" strokeLinecap="round" className="anim-pop" />
+          <path d="M30 68 C 26 50 26 40 30 28" fill="none" stroke="#63d99a" strokeWidth="4" strokeLinecap="round" />
+          <path d="M14 30 l -8 -6 M 46 30 l 8 -6 M 30 24 l -4 -10" stroke="#eaffd9" strokeWidth="2.6" strokeLinecap="round" />
+        </svg>
+      </div>
+    );
+  }
+  if (fx.kind === 'absorb') {
+    return (
+      <div className="pointer-events-none absolute z-[66]" style={{ left: px(fx.x) - 30, top: laneY(fx.lane) + CELL_H / 2 - 36 }}>
+        <div className="anim-ringburst absolute rounded-full border-[3px] border-[#ffcf6b]" style={{ left: 8, top: 8, width: 44, height: 44 }} />
+        <svg viewBox="0 0 60 60" width={60} height={60} className="anim-pop overflow-visible">
+          <path d="M30 6 C 44 12 50 20 48 32 C 46 44 38 50 30 54 C 22 50 14 44 12 32 C 10 20 16 12 30 6 Z" fill="none" stroke="#ffcf6b" strokeWidth="3" strokeLinejoin="round" />
+          <path d="M20 30 l 6 8 l 14 -18" fill="none" stroke="#fff3c4" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+    );
+  }
+  if (fx.kind === 'lotus') {
+    return (
+      <div className="pointer-events-none absolute z-[72]" style={{ left: px(fx.x) - 30, top: laneY(fx.lane) + CELL_H - 104 }}>
+        <div className="anim-ringburst absolute rounded-full border-2 border-[#ffd7ef]" style={{ left: 6, top: 18, width: 48, height: 48 }} />
+        <div className="anim-floatup absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap font-ui text-[14px] font-black" style={{ color: '#ffd7ef', textShadow: '0 0 10px rgba(217,127,180,.9), 0 2px 2px #000' }}>
+          {fx.text ?? '−1s TRAY'}
+        </div>
+      </div>
+    );
+  }
+  if (fx.kind === 'under') {
+    return (
+      <div className="pointer-events-none absolute z-[18]" style={{ left: px(fx.x) - 26, top: laneY(fx.lane) + CELL_H / 2 + 16 }}>
+        <div className="anim-puff rounded-full" style={{ width: 52, height: 34, background: 'radial-gradient(circle, #7a614266 0%, transparent 70%)' }} />
+        {Array.from({ length: 5 }).map((_, i) => {
+          const a = (i / 5) * Math.PI * 2 + 0.5;
+          return (
+            <div key={i} className="anim-burst absolute rounded-full" style={{ width: 6, height: 6, left: 23, top: 14, background: i % 2 ? '#8a6f4c' : '#c9b878', ['--bx' as string]: `${Math.cos(a) * 24}px`, ['--by' as string]: `${Math.sin(a) * 16}px` }} />
+          );
+        })}
       </div>
     );
   }

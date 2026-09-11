@@ -108,6 +108,15 @@ export function sfxEvent(name: string) {
     case 'land': tone(95, 0.16, 'sawtooth', 0.13, 45); noise(0.14, 0.1, 420); break;
     case 'windup': tone(70, 1.1, 'sawtooth', 0.06, 130); break; // husk raises its fists
     case 'smash': tone(60, 0.4, 'sawtooth', 0.17, 30); noise(0.35, 0.15, 240); break;
+    // ── Flora Batch 1 ──
+    case 'cinder': tone(320, 0.14, 'square', 0.07, 620); noise(0.08, 0.05, 1400); break; // pod loosed
+    case 'boom': tone(90, 0.3, 'sawtooth', 0.15, 40); noise(0.26, 0.13, 320); break; // …and detonating
+    case 'bind': tone(880, 0.14, 'sine', 0.06, 300); noise(0.08, 0.05, 900); break; // bindweed lash
+    case 'interrupt': tone(420, 0.16, 'triangle', 0.09, 130); break; // a husk's wind-up breaks
+    case 'snap': tone(220, 0.07, 'square', 0.12, 70); tone(120, 0.12, 'triangle', 0.1, 60, 0.04); break; // trap jaws
+    case 'absorb': tone(1400, 0.06, 'square', 0.04, 900); noise(0.05, 0.04, 1800); break; // spine vs bulwark
+    case 'under': noise(0.12, 0.08, 420); tone(180, 0.12, 'triangle', 0.05, 90); break; // root round breaks earth
+    case 'lotus': tone(1046, 0.12, 'sine', 0.07); tone(1318, 0.16, 'sine', 0.05, undefined, 0.07); break; // rebate sparkle
     case 'win': [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.25, 'sine', 0.09, undefined, i * 0.12)); break;
     case 'lose': [330, 262, 196, 147].forEach((f, i) => tone(f, 0.3, 'triangle', 0.09, undefined, i * 0.16)); break;
   }

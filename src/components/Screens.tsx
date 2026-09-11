@@ -1,6 +1,6 @@
 import { ArrowLeft, ChevronRight, Droplets, Hourglass, Lock, Play, RotateCcw, ScrollText, Shield, Swords, Trophy, X } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { ENEMIES, FLORA, FLORA_ORDER, LOADOUT_SLOTS, LEVELS, WORLDS, unlockedFloraFor } from '../game/data';
+import { ENEMIES, FLORA, FLORA_ORDER, LOADOUT_SLOTS, LEVELS, WORLDS, floraUnlockedAt, unlockedFloraFor } from '../game/data';
 import { levelEnemyIntel } from '../game/engine';
 import type { FloraKey, LevelDef } from '../game/types';
 import { EnemySprite, FloraSprite, HeartTree } from './sprites';
@@ -109,7 +109,7 @@ export function TitleScreen({ onPlay, onHow, hasSave }: { onPlay: () => void; on
         </div>
         <div className="mt-10 flex items-center gap-2 font-ui text-[12px] font-semibold tracking-wider text-[#62788] text-opacity-70">
           <Shield className="h-4 w-4 text-[#57c178]" />
-          <span className="text-[#6b8571]">15 levels · 3 worlds · 6 Flora · 14 Blightspawn · 2 bosses</span>
+          <span className="text-[#6b8571]">15 levels · 3 worlds · 13 Flora · 14 Blightspawn · 2 bosses</span>
         </div>
       </div>
     </Backdrop>
@@ -146,14 +146,23 @@ export function GuideModal({ onClose }: { onClose: () => void }) {
             entirely (only splash cracks stone). Spore Drifters laugh at walls: only the Sunflower Sentinel touches the sky.
             Check the level intel before every battle.
           </Rule>
+          <Rule n="5" title="The shovel">
+            Digging up a Flora returns <b>nothing</b>. Use it to rebuild a broken lane, not to save money.
+          </Rule>
           <Rule n="6" title="The Depths punish habits">
             In the Rootbound Depths the blight answers how you defend: Mite Vaulters leap a lone wall, Tunnel Larva surface at
             column 6 behind your front line, Locust Rangers snipe from two tiles out, Spore Imps catapult into your back half,
             Gargant Husks smash a plant dead after a 1.5s wind-up, and Root Thieves make off with your most wounded Flora.
             Defense in depth — never one wall and a prayer.
           </Rule>
-          <Rule n="5" title="The shovel">
-            Digging up a Flora returns <b>nothing</b>. Use it to rebuild a broken lane, not to save money.
+          <Rule n="7" title="The Flora answer back">
+            Flora Batch 1 arrives with the Depths. The <b className="text-[#ffb37a]">Cinderpod</b> blasts a tile and the one beside it — the reliable
+            way through a Stoneback slab. The <b className="text-[#9fd8c8]">Deeproot Sentry</b> is the only plant that can shoot a burrowed Tunnel Larva.
+            The <b className="text-[#d9e8a8]">Bulwark Bramble</b> snatches Locust spines out of the air. The <b className="text-[#ff9fb8]">Snaptrap Root</b> eats
+            anything under 100 HP that steps into its tile, and nothing else. The <b className="text-[#a3f2a0]">Watchvine</b> always strikes the enemy
+            furthest along its lane — even one that has slipped behind it. The <b className="text-[#7fe0c0]">Bindweed Snare</b> roots one foe per cast,
+            smash wind-ups included. The <b className="text-[#ffd7ef]">Nectar Lotus</b> ripens +40 and rebates the next planting. Pick six; the Depths
+            will tell you which six.
           </Rule>
         </div>
         <h3 className="mb-3 mt-7 font-display text-xl font-bold text-[#ffd76a]">The Flora</h3>
@@ -274,7 +283,7 @@ export function LevelSelect({
           {levels.map((l) => {
             const locked = l.id > maxLevel;
             const st = stars[l.id] ?? 0;
-            const newFlora = l.id === 1 ? ['cactus'] : l.id === 5 ? ['frostcap'] : l.id === 6 ? ['sentinel'] : [];
+            const newFlora = floraUnlockedAt(l.id);
             return (
               <button
                 key={l.id}
@@ -297,7 +306,8 @@ export function LevelSelect({
                     {l.boss && <span className="flex items-center gap-1 rounded-md bg-[#3a1622] px-2 py-0.5 font-ui text-[10px] font-extrabold tracking-widest text-[#ff9db1]"><Swords className="h-3 w-3" /> BOSS</span>}
                     {newFlora.length > 0 && st === 0 && (
                       <span className="rounded-md bg-[#33230f] px-2 py-0.5 font-ui text-[10px] font-extrabold tracking-widest text-[#ffd76a]">
-                        UNLOCKS {FLORA[newFlora[0] as FloraKey].name.toUpperCase()}
+                        UNLOCKS {FLORA[newFlora[0]].name.toUpperCase()}
+                        {newFlora.length > 1 ? ` +${newFlora.length - 1}` : ''}
                       </span>
                     )}
                   </div>
@@ -340,7 +350,15 @@ export function LoadoutScreen({
   const needsAA = intel.includes('drifter');
   const hasAA = picked.includes('sentinel');
   const needsSplash = intel.includes('grub');
-  const hasSplash = picked.includes('cactus') || picked.includes('frostcap');
+  const hasSplash = picked.includes('cinderpod') || picked.includes('cactus') || picked.includes('frostcap');
+  const needsBurrowWatch = intel.includes('larva');
+  const hasBurrowWatch = picked.includes('deeproot');
+  const needsReach = intel.includes('ranger');
+  const hasReach = picked.includes('bulwark');
+  const needsBackline = intel.includes('imp') || intel.includes('thief');
+  const hasBackline = picked.includes('watchvine') || picked.includes('snaptrap');
+  const needsRoot = intel.includes('husk');
+  const hasRoot = picked.includes('bindweed');
   const toggle = (k: FloraKey) => {
     if (picked.includes(k)) setPicked(picked.filter((x) => x !== k));
     else if (picked.length < LOADOUT_SLOTS) setPicked([...picked, k]);
@@ -427,7 +445,28 @@ export function LoadoutScreen({
             )}
             {needsSplash && !hasSplash && (
               <div className="mt-3 rounded-xl border border-[#ffb37a]/60 bg-[#2e1c10] px-3 py-2 font-ui text-[12px] font-bold text-[#ffb37a]">
-                Stoneback Grubs expected — their slabs ignore single-target fire. Bring the Spitting Cactus or Frostcap, or bring prayers.
+                Stoneback Grubs expected — their slabs ignore single-target fire. Bring the Cinderpod, Spitting Cactus or Frostcap, or bring prayers.
+              </div>
+            )}
+            {needsBurrowWatch && !hasBurrowWatch && (
+              <div className="mt-3 rounded-xl border border-[#9fd8c8]/60 bg-[#12241f] px-3 py-2 font-ui text-[12px] font-bold text-[#9fd8c8]">
+                Tunnel Larva expected — they ride under three columns untouchable. Without a Deeproot Sentry, that stretch of lane is theirs.
+              </div>
+            )}
+            {needsReach && !hasReach && (
+              <div className="mt-3 rounded-xl border border-[#d9e8a8]/60 bg-[#24260f] px-3 py-2 font-ui text-[12px] font-bold text-[#d9e8a8]">
+                Locust Rangers expected — they snipe from two tiles out. A Bulwark Bramble catches the spines so your cannons never meet them.
+              </div>
+            )}
+            {needsBackline && !hasBackline && (
+              <div className="mt-3 rounded-xl border border-[#ff9fb8]/60 bg-[#2a0e18] px-3 py-2 font-ui text-[12px] font-bold text-[#ff9fb8]">
+                Things will land behind your wall (Spore Imps) and slip through it (Root Thieves). The Watchvine shoots backwards at whatever is furthest
+                along; the Snaptrap Root swallows the small ones whole.
+              </div>
+            )}
+            {needsRoot && !hasRoot && (
+              <div className="mt-3 rounded-xl border border-[#7fe0c0]/60 bg-[#0f241f] px-3 py-2 font-ui text-[12px] font-bold text-[#7fe0c0]">
+                Gargant Husks cannot be tanked — they smash a plant dead regardless of HP. The Bindweed Snare roots one per cast and breaks the wind-up.
               </div>
             )}
             <div className="mt-3 rounded-xl border border-[#4a7a52]/50 bg-[#101d13] px-3 py-2 font-ui text-[12px] text-[#9db08f]">
