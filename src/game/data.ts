@@ -674,6 +674,8 @@ export const WORLDS: WorldDef[] = [
 
 export const LEVELS: LevelDef[] = [
   // ── WORLD 1 ──
+  // Budget ramps ~15%/level; the tutorial starts with almost no teeth and
+  // ends with a boss wave that still spends a snare now and then.
   {
     id: 0, world: 1, idx: 1, name: 'First Bloom', hpMul: 0.9,
     blurb: 'The Blightspawn probe the vale. Answer with thorns.',
@@ -683,11 +685,11 @@ export const LEVELS: LevelDef[] = [
       W(10, [G('gnat', 1)]),
       W(46, [G('gnat', 2, 2.5)]),
       W(86, [G('gnat', 3, 2)]),
-      W(128, [G('gnat', 3, 1.8), G('beetle', 1, 0, 6)]),
+      W(128, [G('gnat', 4, 1.8), G('beetle', 1, 0, 6)]),
     ],
   },
   {
-    id: 1, world: 1, idx: 2, name: 'Skittering Dark', hpMul: 1.0,
+    id: 1, world: 1, idx: 2, name: 'Skittering Dark', hpMul: 1.02,
     blurb: 'The swarms have hatched. They are many, and they are fast.',
     tip: 'Skitters arrive in threes and sprint. Two Thornvines per lane — or pray for a Cactus soon.',
     addPool: ['gnat', 'skitter'],
@@ -696,182 +698,208 @@ export const LEVELS: LevelDef[] = [
       W(44, [G('gnat', 2, 2)]),
       W(78, [G('skitter', 3, 0.7)]),
       W(112, [G('gnat', 2, 1.6), G('skitter', 3, 0.7, 4)]),
-      W(150, [G('skitter', 3, 0.7), G('skitter', 3, 0.7, 5), G('gnat', 2, 1.5, 9)]),
+      W(150, [G('skitter', 3, 0.7), G('skitter', 3, 0.7, 5), G('gnat', 3, 1.5, 9)]),
     ],
   },
   {
-    id: 2, world: 1, idx: 3, name: 'Husks in the Loam', hpMul: 1.06,
+    id: 2, world: 1, idx: 3, name: 'Husks in the Loam', hpMul: 1.10,
     blurb: 'Beetle husks shoulder through the undergrowth.',
     tip: 'Beetles are slow but dense. A Bramblewall pins them while your vines grind.',
     addPool: ['gnat', 'beetle', 'skitter'],
     waves: [
       W(12, [G('beetle', 1)]),
-      W(50, [G('gnat', 3, 1.6)]),
-      W(88, [G('beetle', 1), G('skitter', 3, 0.7, 6)]),
-      W(128, [G('beetle', 2, 7), G('gnat', 2, 1.5, 3)]),
-      W(172, [G('beetle', 2, 6), G('skitter', 3, 0.7, 4), G('skitter', 3, 0.7, 12)]),
+      W(48, [G('gnat', 3, 1.6)]),
+      W(86, [G('beetle', 1), G('skitter', 4, 0.7, 6)]),
+      W(124, [G('beetle', 2, 4), G('beetle', 1, 0, 14), G('gnat', 3, 1.5, 3), G('skitter', 2, 0.8, 11)]),
+      W(164, [G('beetle', 3, 5), G('beetle', 2, 5, 4), G('skitter', 5, 0.65, 4), G('gnat', 3, 1.4, 11)]),
     ],
   },
   {
-    id: 3, world: 1, idx: 4, name: 'The Creeping Rot', hpMul: 1.12,
+    id: 3, world: 1, idx: 4, name: 'The Creeping Rot', hpMul: 1.22,
     blurb: 'Numbers and armor together. The vale is watching.',
     tip: 'Mix Cacti for swarms and Thornvines for beetles. Replant eaten walls immediately.',
     addPool: ['gnat', 'beetle', 'skitter'],
     waves: [
-      W(12, [G('skitter', 3, 0.7)]),
+      W(12, [G('skitter', 4, 0.7)]),
       W(48, [G('beetle', 1), G('gnat', 2, 1.6, 5)]),
-      W(88, [G('skitter', 3, 0.7), G('beetle', 1, 0, 7), G('gnat', 2, 1.4, 12)]),
-      W(128, [G('beetle', 2, 6), G('skitter', 3, 0.7, 6)]),
-      W(172, [G('beetle', 2, 6), G('gnat', 3, 1.4, 4), G('skitter', 3, 0.7, 10)]),
+      W(88, [G('skitter', 4, 0.7), G('beetle', 1, 0, 7), G('gnat', 3, 1.4, 12)]),
+      W(128, [G('beetle', 3, 4), G('beetle', 2, 5, 14), G('skitter', 4, 0.7, 6), G('gnat', 2, 1.5, 2)]),
+      // six fast bodies in ONE lane group — the final exam before the boss
+      W(170, [G('beetle', 3, 5), G('beetle', 2, 5, 4), G('gnat', 3, 1.4, 4), G('skitter', 6, 0.6, 10)]),
     ],
   },
   {
-    id: 4, world: 1, idx: 5, name: 'Rotback', hpMul: 1.15, boss: 'brute',
+    id: 4, world: 1, idx: 5, name: 'Rotback', hpMul: 1.32, boss: 'brute',
     blurb: 'Something enormous drags itself out of the mire.',
     tip: 'BOSS: the Rotback Brute splits into skitters when it dies. Keep a Cactus near its lane.',
     addPool: ['gnat', 'beetle', 'skitter'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
-      W(54, [G('beetle', 1), G('skitter', 3, 0.7, 6)]),
-      W(100, [G('beetle', 2, 7), G('gnat', 2, 1.5, 5)]),
-      W(152, [G('brute', 1), G('gnat', 2, 2, 10), G('skitter', 3, 0.8, 18)]),
+      W(52, [G('beetle', 1), G('beetle', 1, 0, 12), G('skitter', 3, 0.7, 6), G('gnat', 2, 1.6, 10)]),
+      W(96, [G('beetle', 3, 5), G('beetle', 2, 5, 12), G('gnat', 3, 1.5, 5), G('skitter', 2, 0.8, 11)]),
+      // ~43s between the last pre-boss spawn and the Brute — a real transition window
+      W(146, [G('brute', 1), G('beetle', 2, 6, 20), G('gnat', 3, 2, 12), G('skitter', 5, 0.7, 28)]),
     ],
   },
   // ── WORLD 2 ──
+  // Opener budget sits just under the Rotback finale despite the new shell
+  // mechanic; Wardens carry shell EHP, so their counts stay lean early.
   {
-    id: 5, world: 2, idx: 1, name: 'Cold Snap', hpMul: 1.2,
+    id: 5, world: 2, idx: 1, name: 'Cold Snap', hpMul: 1.18,
     blurb: 'The hollow is colder — and the shells are harder.',
     tip: 'NEW: Frostcap Mushroom. NEW FOE: the Carapace Warden. Chill it, then break it.',
     addPool: ['gnat', 'warden', 'skitter'],
     waves: [
       W(12, [G('warden', 1)]),
-      W(52, [G('gnat', 3, 1.5)]),
-      W(92, [G('warden', 1), G('skitter', 3, 0.7, 7)]),
-      W(134, [G('warden', 1), G('beetle', 1, 0, 6), G('gnat', 2, 1.4, 12)]),
-      W(178, [G('warden', 2, 8), G('skitter', 3, 0.7, 5), G('gnat', 2, 1.4, 11)]),
+      W(50, [G('gnat', 4, 1.5)]),
+      W(90, [G('warden', 2, 8), G('skitter', 5, 0.7, 7)]),
+      // opener kept just under the Rotback finale: one Warden fewer, more teeth
+      W(132, [G('beetle', 1), G('gnat', 3, 1.4, 5), G('skitter', 2, 0.8, 12)]),
+      W(172, [G('skitter', 5, 0.7), G('gnat', 3, 1.4, 5), G('warden', 2, 10, 11)]),
     ],
   },
   {
-    id: 6, world: 2, idx: 2, name: 'Things on the Wind', hpMul: 1.25,
+    id: 6, world: 2, idx: 2, name: 'Things on the Wind', hpMul: 1.23,
     blurb: 'The blight has learned to fly. Your walls mean nothing to wings.',
     tip: 'NEW: Sunflower Sentinel — the ONLY answer to Spore Drifters. Bring it or lose lanes.',
     addPool: ['gnat', 'warden', 'drifter'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
-      W(50, [G('drifter', 1)]),
-      W(90, [G('warden', 1), G('gnat', 2, 1.5, 7)]),
-      W(130, [G('drifter', 1), G('skitter', 3, 0.7, 5)]),
-      W(174, [G('warden', 1), G('drifter', 2, 6, 5), G('gnat', 2, 1.4, 11)]),
+      // the first Drifter arrives with ground teeth beside it — anti-air is a
+      // priority call, not the only thing happening
+      W(48, [G('drifter', 1), G('gnat', 2, 1.6, 5)]),
+      W(88, [G('warden', 1), G('gnat', 3, 1.5, 7)]),
+      W(128, [G('beetle', 1, 0, 4), G('skitter', 3, 0.7, 2), G('gnat', 2, 1.4, 8)]),
+      W(170, [G('warden', 1), G('drifter', 1, 0, 5), G('beetle', 1, 0, 10), G('gnat', 2, 1.4, 12)]),
     ],
   },
   {
-    id: 7, world: 2, idx: 3, name: 'Shellshock', hpMul: 1.3,
+    id: 7, world: 2, idx: 3, name: 'Shellshock', hpMul: 1.28,
+    // Air pressure is spread across several waves; a flawless grid stays
+    // attainable, but one spent snare still clears the 3★ bar here.
+    starSnares: { two: 3, three: 4 },
     blurb: 'Wardens march in pairs now, with wings above them.',
     tip: 'Two Sentinels minimum. Slow the ground push with Frostcaps while Sentinels own the sky.',
     addPool: ['gnat', 'beetle', 'warden', 'drifter'],
     waves: [
-      W(12, [G('skitter', 3, 0.7), G('skitter', 3, 0.7, 6)]),
-      W(54, [G('warden', 1), G('beetle', 1, 0, 8)]),
-      W(96, [G('drifter', 1), G('gnat', 3, 1.4, 6)]),
-      W(138, [G('warden', 1), G('skitter', 3, 0.7, 6), G('beetle', 1, 0, 12)]),
-      W(182, [G('beetle', 2, 6), G('drifter', 2, 5, 5), G('warden', 1, 0, 11)]),
+      W(12, [G('skitter', 3, 0.7), G('drifter', 1, 0, 76)]),
+      W(52, [G('warden', 1), G('beetle', 1, 0, 8)]),
+      W(92, [G('drifter', 1), G('drifter', 1, 0, 26), G('gnat', 3, 1.4, 6)]),
+      W(134, [G('warden', 1), G('skitter', 3, 0.7, 6), G('beetle', 1, 0, 12), G('gnat', 2, 1.5, 3)]),
+      W(176, [G('beetle', 2, 6), G('drifter', 2, 5, 5), G('warden', 1, 0, 16), G('gnat', 3, 1.4, 11)]),
     ],
   },
   {
-    id: 8, world: 2, idx: 4, name: 'The Hollow Choir', hpMul: 1.38,
+    id: 8, world: 2, idx: 4, name: 'The Hollow Choir', hpMul: 1.34,
     blurb: 'Every horror at once, singing through the frost.',
     tip: 'Economy is survival: four Glowbulbs early, or the final waves will bury you.',
     addPool: ['gnat', 'beetle', 'warden', 'drifter', 'skitter'],
     waves: [
       W(12, [G('warden', 1), G('gnat', 2, 1.6, 6)]),
-      W(52, [G('skitter', 3, 0.7), G('beetle', 1, 0, 6), G('drifter', 1, 0, 11)]),
-      W(94, [G('warden', 2, 8), G('gnat', 2, 1.4, 10)]),
-      W(136, [G('beetle', 2, 6), G('skitter', 3, 0.7, 7), G('drifter', 1, 0, 12)]),
-      W(182, [G('warden', 2, 7), G('drifter', 2, 5, 7), G('skitter', 3, 0.7, 13)]),
+      W(50, [G('skitter', 3, 0.7), G('beetle', 1, 0, 6), G('drifter', 1, 0, 11)]),
+      W(92, [G('warden', 1), G('gnat', 4, 1.4, 8)]),
+      W(134, [G('beetle', 2, 6), G('skitter', 3, 0.7, 7), G('drifter', 1, 0, 12)]),
+      W(178, [G('warden', 1), G('drifter', 2, 6, 7), G('skitter', 3, 0.7, 13)]),
     ],
   },
   {
     id: 9, world: 2, idx: 5, name: 'The Withered Colossus', hpMul: 1.3, boss: 'colossus',
     blurb: 'It has been growing under the vale for a hundred years.',
     tip: 'BOSS: 3 phases — it speeds up as it breaks and constantly calls adds. Walls + Sentinels or die.',
-    addPool: ['gnat', 'beetle', 'warden', 'skitter'],
+    // drifters can join the Colossus's called adds — the anti-air tax lasts
+    // the whole fight, keeping this finale above the gauntlet before it
+    addPool: ['gnat', 'warden', 'skitter', 'drifter'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
-      W(56, [G('warden', 1), G('skitter', 3, 0.7, 7)]),
-      W(102, [G('drifter', 1), G('beetle', 1, 0, 7)]),
-      W(156, [G('colossus', 1), G('warden', 1, 0, 14), G('gnat', 2, 1.5, 24)]),
+      W(52, [G('warden', 1), G('skitter', 3, 0.7, 7), G('gnat', 3, 1.6, 3)]),
+      // two Drifters before the boss: the anti-air tax the Colossus walks behind
+      W(98, [G('drifter', 2, 7), G('beetle', 1, 0, 8)]),
+      // ~45s cleanup window; the first add does not arrive until 14s after the Colossus
+      W(150, [G('colossus', 1), G('warden', 1, 0, 14), G('gnat', 3, 1.5, 24), G('skitter', 3, 0.7, 32)]),
     ],
   },
   // ── WORLD 3: THE ROOTBOUND DEPTHS ──
   // Batch 1 enemies debut here. Every level answers a lazy habit: one thin wall,
   // all-shooters-no-wall, cactus-only splash, front-line-only defense.
+  // New mechanics always share waves with familiar ground teeth, and later
+  // levels recycle the world's earlier tricks at higher counts.
   {
-    id: 10, world: 3, idx: 1, name: 'Over the Wall', hpMul: 1.4,
+    id: 10, world: 3, idx: 1, name: 'Over the Wall', hpMul: 1.34,
     blurb: 'The blight has watched your walls. It brought springs — and shovels.',
-    tip: 'NEW: Deeproot Sentry — the only Flora that can shoot a burrowed Larva — and Nectar Lotus, the vale\u2019s strongest economy. NEW FOES: Mite Vaulters leap a lone wall — double up; Tunnel Larva ride under columns 7–9 and surface at column 6. Hold the mid-board.',
+    tip: 'NEW: Deeproot Sentry — the only Flora that can shoot a burrowed Larva — and Nectar Lotus, the vale’s strongest economy. NEW FOES: Mite Vaulters leap a lone wall — double up; Tunnel Larva ride under columns 7–9 and surface at column 6. Hold the mid-board.',
     addPool: ['gnat', 'vaulter', 'larva'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
-      W(52, [G('vaulter', 2, 4)]),
-      W(94, [G('larva', 2, 6), G('gnat', 2, 1.6, 8)]),
-      W(140, [G('vaulter', 3, 3.5), G('larva', 1, 0, 10), G('gnat', 2, 1.5, 4)]),
-      W(186, [G('larva', 2, 7), G('vaulter', 3, 3, 6), G('gnat', 3, 1.4, 12)]),
+      W(50, [G('vaulter', 2, 4), G('gnat', 2, 1.6, 5)]),
+      W(90, [G('larva', 2, 6), G('gnat', 2, 1.6, 8)]),
+      W(132, [G('vaulter', 3, 3.5), G('larva', 1, 0, 10), G('gnat', 2, 1.5, 4)]),
+      W(176, [G('larva', 2, 7), G('vaulter', 3, 3, 6), G('gnat', 3, 1.4, 12)]),
     ],
   },
   {
-    id: 11, world: 3, idx: 2, name: 'Shell Game', hpMul: 1.45,
+    id: 11, world: 3, idx: 2, name: 'Shell Game', hpMul: 1.4,
     blurb: 'Stone and shell together. One wants burst. One wants splash. Bring both.',
-    tip: 'NEW: the Cinderpod — its blast hits the victim\u2019s tile and the one beside it, the reliable answer to stone. NEW FOE: the Stoneback Grub, whose slab ignores single-target hits entirely. Cactus volleys and Frostcap spores crack stone too; Thornvines finish the body. The Warden wants the opposite.',
+    tip: 'NEW: the Cinderpod — its blast hits the victim’s tile and the one beside it, the reliable answer to stone. NEW FOE: the Stoneback Grub, whose slab ignores single-target hits entirely. Cactus volleys and Frostcap spores crack stone too; Thornvines finish the body. The Warden wants the opposite.',
     addPool: ['gnat', 'warden', 'grub'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
-      W(52, [G('grub', 1), G('gnat', 2, 1.6, 6)]),
-      W(96, [G('warden', 1), G('grub', 1, 0, 8)]),
-      W(142, [G('grub', 2, 8), G('skitter', 3, 0.7, 6)]),
-      W(188, [G('warden', 2, 8), G('grub', 2, 8, 6), G('gnat', 3, 1.4, 12)]),
+      W(50, [G('grub', 1), G('gnat', 2, 1.6, 6)]),
+      W(92, [G('warden', 1), G('grub', 1, 0, 8), G('skitter', 3, 0.7, 2)]),
+      W(134, [G('grub', 1), G('gnat', 3, 1.5, 5), G('skitter', 3, 0.7, 11)]),
+      // recycling: a Warden pair and Vaulters from the prior level join the grubs
+      W(178, [G('warden', 2, 8), G('grub', 1, 0, 6), G('vaulter', 2, 4, 12), G('skitter', 3, 0.7, 4), G('gnat', 3, 1.4, 16)]),
     ],
   },
   {
-    id: 12, world: 3, idx: 3, name: 'Sting From Afar', hpMul: 1.5,
+    id: 12, world: 3, idx: 3, name: 'Sting From Afar', hpMul: 1.46,
     blurb: 'Spines from two tiles out, and worse raining from the sky.',
     tip: 'NEW: Bulwark Bramble, whose boughs swallow Ranger spines mid-flight, and Watchvine, which always strikes the enemy furthest along its lane — even one behind it. NEW FOES: Locust Rangers snipe from range; Spore Imps are catapulted into the BACK half of a lane.',
     addPool: ['gnat', 'ranger', 'imp'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
-      W(52, [G('ranger', 2, 4)]),
-      W(94, [G('ranger', 1), G('imp', 2, 3, 6, true)]),
-      W(140, [G('ranger', 2, 5), G('imp', 3, 2.5, 8, true), G('gnat', 2, 1.6, 4)]),
-      W(186, [G('imp', 4, 2.2, 0, true), G('ranger', 3, 4, 5), G('skitter', 3, 0.7, 12)]),
+      // Rangers debut alongside the baseline swarm they out-range
+      W(50, [G('ranger', 3, 4), G('gnat', 2, 1.6, 5)]),
+      W(90, [G('ranger', 1), G('imp', 2, 3, 6, true), G('gnat', 2, 1.5, 2)]),
+      W(134, [G('ranger', 3, 5), G('imp', 4, 2.2, 8, true), G('vaulter', 2, 4, 4), G('skitter', 3, 0.7, 11)]),
+      W(178, [G('imp', 4, 2.2, 0, true), G('ranger', 4, 4, 5), G('vaulter', 2, 4, 10), G('gnat', 3, 1.4, 2)]),
     ],
   },
   {
-    id: 13, world: 3, idx: 4, name: 'The Long Dark', hpMul: 1.55,
+    id: 13, world: 3, idx: 4, name: 'The Long Dark', hpMul: 1.52,
     blurb: 'Something that does not chew. Something that does not fight — only takes.',
     tip: 'NEW: Snaptrap Root, which swallows anything under 100 HP that steps into its tile, and Bindweed Snare, which roots one foe per cast — including a Husk mid-wind-up. NEW FOES: the Gargant Husk SMASHES a plant dead in one 1.5s wind-up; Root Thieves snatch your most wounded Flora every 6s. Kill a thief mid-heist and the plant drops back unharmed.',
     addPool: ['gnat', 'husk', 'thief'],
     waves: [
       W(12, [G('gnat', 3, 1.6)]),
-      W(54, [G('thief', 1), G('beetle', 1, 0, 6)]),
-      W(98, [G('husk', 1), G('gnat', 3, 1.4, 8)]),
-      W(146, [G('thief', 2, 9), G('husk', 1, 0, 10), G('vaulter', 2, 4, 6)]),
-      W(192, [G('husk', 2, 12), G('thief', 1, 0, 8), G('grub', 1, 0, 14), G('gnat', 3, 1.4, 4)]),
+      W(52, [G('thief', 1), G('beetle', 1, 0, 6)]),
+      W(94, [G('husk', 1), G('gnat', 3, 1.4, 8)]),
+      // the two new mechanics share the wave with familiar skitter teeth
+            // Stoneback at t156: splash kit kills it before the finale; a starter
+      // board stalls it forever while thieves keep stealing the replacements
+      W(140, [G('thief', 2, 9), G('husk', 3, 9, 10), G('grub', 1, 0, 16), G('vaulter', 2, 4, 6), G('skitter', 3, 0.7, 2)]),
+      // the finale wave: three Husks in one push across two lanes — no single
+      // wall survives it and stalling both lanes splits your fire
+      W(184, [G('husk', 2, 10), G('husk', 1, 0, 14), G('thief', 1, 0, 8), G('gnat', 3, 1.4, 4), G('skitter', 3, 0.7, 14)]),
     ],
   },
   {
-    id: 14, world: 3, idx: 5, name: 'Heart of the Rot', hpMul: 1.4, boss: 'colossus',
+    id: 14, world: 3, idx: 5, name: 'Heart of the Rot', hpMul: 1.45, boss: 'colossus',
     blurb: 'The Colossus again — and this time it has learned every trick you taught it.',
     tip: 'BOSS: the Depths answer with you — vaulters, grubs, thieves, imps. Defense in depth: splash, burst, walls, AND a backline. Keep your calm and your snares.',
     addPool: ['gnat', 'vaulter', 'ranger', 'thief'],
     waves: [
       W(12, [G('gnat', 2, 2), G('vaulter', 2, 4, 8)]),
-      W(56, [G('grub', 1), G('ranger', 1, 0, 7)]),
-      W(104, [G('thief', 2, 8), G('imp', 3, 2.5, 6, true), G('larva', 1, 0, 12)]),
-      W(158, [G('colossus', 1), G('husk', 1, 0, 16), G('imp', 2, 3, 24, true), G('gnat', 2, 1.5, 30)]),
+      W(54, [G('grub', 1), G('ranger', 1, 0, 7)]),
+      W(100, [G('thief', 2, 8), G('imp', 3, 2.5, 6, true), G('larva', 1, 0, 12)]),
+      // 40s after the last pre-boss spawn; boss-wave adds begin at +16s
+      W(152, [G('colossus', 1), G('husk', 1, 0, 16), G('imp', 2, 3, 24, true), G('gnat', 2, 1.5, 30)]),
     ],
   },
   // ── WORLD 4: THE HOLLOW CROWN ──
   // Batch 2 enemies debut here. Where World 3 punished lazy habits, World 4
   // punishes lazy COUNTERS: the loadouts Batch 1 taught you to reach for.
+  // hpMul opens ~2% above World 3's penultimate level and ramps ~5-6%/step;
+  // the geometric pressure comes from body counts, not a multiplier cliff.
   //   4-1 Molt Wisp          → splash-only clears leave two bodies standing
   //   4-2 Grovemaw / Marauder→ status-effect Flora is eaten or shrugged off
   //   4-3 Chitterling / Nightcap → the front line is not the only line, and the
@@ -879,72 +907,86 @@ export const LEVELS: LevelDef[] = [
   //   4-4 Fen Wretch         → your economy is a target, not a given
   //   4-5 The Hollow King    → one loadout cannot answer all three phases
   {
-    id: 15, world: 4, idx: 1, name: 'Ash on the Wind', hpMul: 1.9,
+    id: 15, world: 4, idx: 1, name: 'Ash on the Wind', hpMul: 1.55,
     blurb: 'Something small and bright is drifting up from the crown. It does not die so much as come apart.',
-    tip: 'NEW FOE: the Molt Wisp splits into two 25-HP wisps the first time it drops below half HP. A single big splash hit just makes two problems — bring sustained lane clear (Cactus volleys, Watchvine) instead of one-shot burst.',
+    tip: 'NEW: Emberlash Vine and Needle Reed. NEW FOE: the Molt Wisp splits into two 25-HP wisps the first time it drops below half HP. A single big splash hit just makes two problems — bring sustained lane clear (Cactus volleys, Watchvine) instead of one-shot burst.',
     addPool: ['gnat', 'wisp', 'skitter'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
-      W(48, [G('wisp', 3, 3.5)]),
-      W(84, [G('wisp', 4, 2.8), G('gnat', 3, 1.4, 8)]),
-      W(122, [G('wisp', 4, 2.6), G('beetle', 1, 0, 6), G('skitter', 3, 0.7, 12)]),
-      W(160, [G('wisp', 5, 2.2), G('gnat', 3, 1.4, 8), G('beetle', 1, 0, 14)]),
-      W(196, [G('wisp', 5, 2), G('skitter', 3, 0.7, 6), G('gnat', 3, 1.4, 12)]),
+      W(46, [G('wisp', 3, 3.5)]),
+      W(82, [G('wisp', 4, 2.8), G('gnat', 3, 1.4, 8)]),
+      W(120, [G('wisp', 4, 2.6), G('beetle', 1, 0, 6), G('skitter', 3, 0.7, 12)]),
+      W(156, [G('wisp', 6, 2.2), G('gnat', 3, 1.4, 8), G('beetle', 1, 0, 14)]),
+      W(192, [G('wisp', 6, 2), G('skitter', 3, 0.7, 6), G('gnat', 3, 1.4, 12)]),
     ],
   },
   {
-    id: 16, world: 4, idx: 2, name: 'The Slow Green Hunger', hpMul: 2.0,
+    id: 16, world: 4, idx: 2, name: 'The Slow Green Hunger', hpMul: 1.65,
     blurb: 'A slug the size of a barrow, and something with bark where a hide should be.',
-    tip: 'NEW FOES: the Grovemaw Slug EATS your slows and turns them into damage reduction — leave Frostcap at home and bring raw damage. The Barkskin Marauder shrugs off Bindweed Snare entirely and cannot be time-stalled.',
+    tip: 'NEW: Ironbark Titan and Gale Fern. NEW FOES: the Grovemaw Slug EATS your slows and turns them into damage reduction — leave Frostcap at home and bring raw damage. The Barkskin Marauder shrugs off Bindweed Snare entirely and cannot be time-stalled.',
     addPool: ['gnat', 'slug', 'marauder'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
-      W(48, [G('slug', 1), G('gnat', 2, 1.6, 6)]),
-      W(84, [G('marauder', 2, 6), G('wisp', 3, 3.5, 8)]),
-      W(122, [G('slug', 2, 9), G('marauder', 2, 6, 6), G('skitter', 3, 0.7, 14)]),
-      W(160, [G('slug', 2, 8), G('marauder', 3, 5, 6), G('wisp', 3, 3, 12)]),
-      W(196, [G('slug', 3, 7), G('marauder', 3, 5, 8), G('gnat', 3, 1.4, 4)]),
+      W(46, [G('slug', 1), G('gnat', 2, 1.6, 6), G('skitter', 3, 0.7, 10)]),
+      W(82, [G('marauder', 3, 5.5), G('wisp', 3, 3.2, 8), G('wisp', 2, 3.2, 16), G('gnat', 2, 1.5, 2)]),
+      W(118, [G('slug', 2, 9), G('marauder', 3, 6, 6), G('skitter', 5, 0.7, 14)]),
+      W(154, [G('slug', 2, 8), G('marauder', 4, 4.5, 6), G('wisp', 2, 3, 12), G('wisp', 2, 3, 17), G('gnat', 2, 1.5, 15)]),
+      W(190, [G('slug', 3, 8), G('marauder', 4, 5, 8), G('wisp', 4, 2.6, 14), G('wisp', 2, 3, 19), G('skitter', 3, 0.7, 2), G('skitter', 3, 0.7, 9), G('gnat', 3, 1.4, 6)]),
     ],
   },
   {
-    id: 17, world: 4, idx: 3, name: 'A Thousand Small Teeth', hpMul: 2.05,
+    id: 17, world: 4, idx: 3, name: 'A Thousand Small Teeth', hpMul: 1.74,
     blurb: 'The undergrowth chitters. Then the chittering is behind you.',
-    tip: 'NEW FOES: Chitterling Packs arrive as FOUR bodies in one lane slot, each far too small to matter and far too fast to ignore. Nightcap Assassins sprint past your front two plants and burst something in the BACK row — keep a Watchvine or Snaptrap behind the wall.',
+    tip: 'NEW: Sentinel Bloom. NEW FOES: Chitterling Packs arrive as FOUR bodies in one lane slot, each far too small to matter and far too fast to ignore. Nightcap Assassins sprint past your front two plants and burst something in the BACK row — keep a Watchvine or Snaptrap behind the wall.',
     addPool: ['chitter', 'nightcap', 'gnat'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
-      W(48, [G('chitter', 1), G('gnat', 2, 1.6, 6)]),
-      W(84, [G('nightcap', 2, 5), G('chitter', 2, 6, 8)]),
-      W(120, [G('chitter', 3, 5), G('nightcap', 3, 4, 6), G('skitter', 3, 0.7, 12)]),
-      W(158, [G('nightcap', 4, 3.5), G('chitter', 3, 4.5, 6), G('gnat', 3, 1.4, 12)]),
-      W(194, [G('nightcap', 5, 3), G('chitter', 4, 4, 6), G('beetle', 1, 0, 10)]),
+      W(46, [G('chitter', 1), G('gnat', 2, 1.6, 6)]),
+      // both new tricks debut in a wave that also walks two gnat pairs in.
+      // t=92 (was 82): the answer to a Nightcap costs 150 and the economy
+      // could not field a Gale in the dash lane by t~95 on tight seeds.
+      W(92, [G('nightcap', 2, 5), G('chitter', 2, 6, 12), G('gnat', 2, 1.5, 2)]),
+      W(116, [G('chitter', 3, 5), G('nightcap', 2, 4, 6), G('skitter', 3, 0.7, 12)]),
+      W(152, [G('nightcap', 3, 3.5), G('chitter', 3, 4.5, 6), G('gnat', 3, 1.4, 12)]),
+      // one Assassin fewer than the old table — the 5-deep capper was the cliff
+      W(188, [G('nightcap', 4, 3), G('chitter', 4, 4, 6), G('beetle', 1, 0, 10)]),
     ],
   },
   {
-    id: 18, world: 4, idx: 4, name: 'The Fen Remembers', hpMul: 2.1,
+    id: 18, world: 4, idx: 4, name: 'The Fen Remembers', hpMul: 1.83,
     blurb: 'The water here is warm and wrong. Your Glowbulbs are ripening slower every minute.',
-    tip: 'NEW FOE: the Fen Wretch halves the Nectar output of every Nectar plant in its lane for as long as it lives — an aura, not a hit. Kill it the instant it shows or your economy stalls out from under you. Everything from the crown comes with it.',
+    tip: 'NEW: Ambush Fern. NEW FOE: the Fen Wretch halves the Nectar output of every Nectar plant in its lane for as long as it lives — an aura, not a hit. Kill it the instant it shows or your economy stalls out from under you. Everything from the crown comes with it.',
     addPool: ['wretch', 'slug', 'chitter', 'gnat'],
     waves: [
       W(12, [G('gnat', 3, 1.6)]),
-      W(48, [G('wretch', 2, 6), G('gnat', 2, 1.6, 6)]),
-      W(84, [G('wretch', 3, 5), G('chitter', 1, 0, 8), G('larva', 1, 0, 14)]),
-      W(120, [G('wretch', 3, 5), G('slug', 1, 0, 8), G('marauder', 2, 6, 14)]),
-      W(158, [G('wretch', 4, 5), G('husk', 1, 0, 10), G('chitter', 2, 6, 4)]),
-      W(196, [G('wretch', 4, 4.5), G('slug', 2, 8, 6), G('nightcap', 3, 4, 12), G('gnat', 3, 1.4, 2)]),
+      W(46, [G('wretch', 2, 6), G('gnat', 2, 1.6, 6)]),
+      W(82, [G('wretch', 3, 5), G('chitter', 3, 5, 8), G('nightcap', 2, 6, 14), G('gnat', 2, 1.4, 2)]),
+      // Slug/Marauder return one level after their debut (familiar, not new)
+      W(118, [G('wretch', 3, 5), G('slug', 1, 0, 8), G('marauder', 3, 6, 13), G('gnat', 2, 1.5, 2)]),
+      W(154, [G('wretch', 3, 5), G('husk', 1, 0, 10), G('chitter', 4, 5.5, 4), G('wisp', 2, 3, 12), G('nightcap', 2, 6, 16)]),
+      // Nightcap finale spread across TWO lanes (a 4-stack in one lane only
+      // tests that lane; two lanes test the whole back row at once)
+      W(190, [G('wretch', 3, 4.5), G('slug', 1, 0, 6), G('nightcap', 2, 5, 11), G('nightcap', 2, 5, 18), G('wisp', 2, 3, 22), G('chitter', 2, 5, 16), G('gnat', 3, 1.4, 2)]),
     ],
   },
   {
-    id: 19, world: 4, idx: 5, name: 'The Hollow Crown', hpMul: 1.95, boss: 'hollowking',
-    blurb: 'It wears the vale\u2019s own tricks now, and it has learned which of your answers are habits.',
-    tip: 'BOSS: three phases. It sheds Molt Wisps as it walks; below 2/3 HP it shuts a whole damage channel off for 5s at a time, alternating between single-target strikes and splash — watch the ward and switch plants; below 1/4 HP it enrages, hitting twice as fast but taking DOUBLE damage. Hold your burst for the enrage.',
+    id: 19, world: 4, idx: 5, name: 'The Hollow Crown', hpMul: 1.78, boss: 'hollowking',
+    blurb: 'It wears the vale’s own tricks now, and it has learned which of your answers are habits.',
+    tip: 'NEW: Prism Bud. BOSS: three phases. It sheds Molt Wisps as it walks; below 2/3 HP it shuts a whole damage channel off for 5s at a time, alternating between single-target strikes and splash — watch the ward and switch plants; below 1/4 HP it enrages, hitting twice as fast but taking DOUBLE damage. Hold your burst for the enrage.',
     addPool: ['wisp', 'chitter', 'marauder', 'gnat'],
     waves: [
-      W(12, [G('gnat', 2, 2), G('wisp', 3, 3.5, 8)]),
-      W(50, [G('marauder', 2, 6), G('slug', 1, 0, 7)]),
-      W(90, [G('nightcap', 3, 5), G('chitter', 2, 6, 6), G('wretch', 2, 6, 12)]),
-      W(130, [G('wisp', 4, 3), G('marauder', 2, 6, 8), G('chitter', 2, 6, 14)]),
-      W(168, [G('hollowking', 1), G('marauder', 2, 7, 14), G('nightcap', 3, 4, 20), G('chitter', 2, 6, 28), G('gnat', 3, 1.4, 36)]),
+      // opener air is deliberately light and late: a pre-60s Wisp in a lane that
+      // can't yet afford anti-air pops a snare, and the backline wave punishes
+      // that lane a minute later (this was a scripted-bot loss at ~t100)
+      W(14, [G('gnat', 2, 2), G('wisp', 2, 4, 14)]),
+      W(48, [G('marauder', 2, 6), G('slug', 1, 0, 7)]),
+      // backline wave starts at t=98 and arrives one group at a time: nightcaps
+      // first, then the flood, then the wretches — never two lanes at once
+      W(98, [G('nightcap', 2, 5), G('chitter', 3, 5.5, 10), G('wretch', 2, 6, 16)]),
+      W(124, [G('wisp', 4, 3), G('marauder', 2, 6, 8), G('chitter', 3, 5.5, 14), G('nightcap', 2, 6, 20)]),
+      // boss pushed from t=168 → t=172 and the last pre-boss spawn lands at
+      // t=144, leaving a ~28s transition window; the court starts at +16s
+      W(172, [G('hollowking', 1), G('marauder', 2, 7, 16), G('nightcap', 2, 6, 22), G('nightcap', 2, 7, 28), G('chitter', 4, 5, 36), G('nightcap', 2, 7, 46), G('wisp', 3, 3, 54), G('gnat', 3, 1.4, 62)]),
     ],
   },
   // ── WORLD 5: THE HOLLOW RECKONING ──
@@ -956,69 +998,96 @@ export const LEVELS: LevelDef[] = [
   //   5-3 Bulwark Roach    → spray efficiency floors to chipping
   //   5-4 Toad + Nightstalker → displacement and ripostes find nothing to grab
   //   5-5 Wardshell Grub + the King → traps spring on nothing, plates eat first hits
+  // The gimmicks are ordinary-stat bodies (see README), so the geometric ramp
+  // here is carried by DENSITY: later levels re-use every Batch-3 body plus
+  // Batch-2 pressure (wisps, marauders, rangers, chitter) at growing counts.
   {
-    id: 20, world: 5, idx: 1, name: 'The Knitting Dark', hpMul: 2.15,
+    id: 20, world: 5, idx: 1, name: 'The Knitting Dark', hpMul: 1.88,
+    // World opener: the 3★ bar bends back to 4 snares so the breather after
+    // the W4 crown reads as a breather (opener pressure sits just below the
+    // boss baseline, per the world-transition rule).
+    starSnares: { two: 3, three: 4 },
     blurb: 'The husks come back together while you blink. Something has been timing your swings.',
     tip: 'NEW FOE: the Regrowth Husk knits 15 HP back for every 2s it is not hit. An Ironbark Titan swinging every 3s watches its own damage close up between shots. Do not give it a quiet beat: stacked Thornvines (1.4s), a held Emberlash beam, and anything that fires in volleys keep the wound open.',
     addPool: ['gnat', 'regrow', 'beetle'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
-      W(48, [G('regrow', 2, 5), G('gnat', 2, 1.6, 8)]),
-      W(90, [G('regrow', 3, 4.5), G('beetle', 1, 0, 10)]),
-      W(132, [G('regrow', 3, 4), G('chitter', 2, 6, 8), G('gnat', 2, 1.5, 14)]),
-      W(176, [G('regrow', 4, 3.5), G('beetle', 2, 6, 6), G('wisp', 2, 5, 12)]),
+      W(46, [G('regrow', 3, 5), G('nightcap', 1, 0, 16), G('gnat', 3, 1.6, 8), G('skitter', 3, 0.7, 11)]),
+      W(86, [G('regrow', 5, 4), G('beetle', 1, 0, 10)]),
+      W(128, [G('regrow', 4, 4), G('chitter', 5, 5, 8), G('nightcap', 2, 6, 16), G('gnat', 2, 1.5, 14)]),
+      W(170, [G('regrow', 6, 3.2), G('beetle', 3, 6, 6), G('nightcap', 2, 6, 16), G('chitter', 3, 5, 12)]),
     ],
   },
   {
-    id: 21, world: 5, idx: 2, name: 'Half the Fire', hpMul: 2.2,
+    id: 21, world: 5, idx: 2, name: 'Half the Fire', hpMul: 1.97,
     blurb: 'Something walked out of the kiln and kept the ash. Your embers still bite it — about half as hard.',
-    tip: 'NEW FOE: the Cinder Golem takes only 50% damage from burn and fire — the Emberlash beam smoulders at 4/s and Prism Bud\u2019s fire burst lands for 9. But its clay drinks no physical damage: Ironbark strikes, Thornvine thorns, and every other half of the Prism go in whole. Cinderpod blasts are concussion, not fire — those work too. Bring both channels.',
+    tip: 'NEW FOE: the Cinder Golem takes only 50% damage from burn and fire — the Emberlash beam smoulders at 4/s and Prism Bud’s fire burst lands for 9. But its clay drinks no physical damage: Ironbark strikes, Thornvine thorns, and every other half of the Prism go in whole. Cinderpod blasts are concussion, not fire — those work too. Bring both channels.',
     addPool: ['golem', 'wisp', 'gnat'],
     waves: [
       W(12, [G('gnat', 3, 1.6)]),
-      W(50, [G('golem', 1), G('gnat', 2, 1.6, 6)]),
-      W(92, [G('golem', 2, 7), G('wisp', 3, 4, 6)]),
-      W(136, [G('golem', 2, 6), G('marauder', 2, 5, 8), G('gnat', 3, 1.5, 14)]),
-      W(180, [G('golem', 3, 5.5), G('wisp', 4, 3, 8), G('skitter', 3, 0.7, 16)]),
+      W(48, [G('golem', 2, 7), G('nightcap', 1, 0, 16), G('gnat', 3, 1.6, 6)]),
+      W(88, [G('golem', 3, 7), G('wisp', 4, 3, 6), G('wisp', 2, 3, 14), G('gnat', 2, 1.5, 2)]),
+      W(130, [G('golem', 3, 6), G('marauder', 3, 5, 8), G('chitter', 2, 5, 15), G('nightcap', 2, 6, 6), G('gnat', 3, 1.5, 3)]),
+      W(172, [G('golem', 5, 5), G('wisp', 4, 2.6, 8), G('nightcap', 2, 5, 12), G('nightcap', 2, 5, 20), G('chitter', 3, 5, 13), G('chitter', 2, 5, 3), G('skitter', 3, 0.7, 26)]),
     ],
   },
   {
-    id: 22, world: 5, idx: 3, name: 'Small Change', hpMul: 2.2,
+    id: 22, world: 5, idx: 3, name: 'Small Change', hpMul: 2.06,
     blurb: 'A shell that counts your needles as pennies — and a grub that takes one free hit per tile.',
     tip: 'NEW FOES: the Bulwark Roach floors any single hit under 10 damage down to 1 — a whole Needle Reed volley spends itself for five. Hit it hard, not often: Thornvines, Ironbark, Cinderpods (an Emberlash beam is a stream, not a volley — that one still works). The Wardshell Grub nullifies the FIRST hit in every new tile it steps into: an Ambush Fern springs for zero. Let anything cheap pop the ward, then bury it.',
     addPool: ['roach', 'wardshell', 'chitter', 'gnat'],
     waves: [
       W(12, [G('gnat', 2, 2)]),
-      W(48, [G('roach', 2, 5), G('gnat', 2, 1.6, 8)]),
-      W(90, [G('wardshell', 2, 6), G('chitter', 1, 0, 10)]),
-      W(132, [G('roach', 3, 4.5), G('wardshell', 2, 6, 8), G('gnat', 2, 1.5, 14)]),
-      W(176, [G('roach', 3, 4), G('wardshell', 3, 5, 6), G('chitter', 2, 6, 12)]),
+      W(46, [G('roach', 3, 5), G('gnat', 3, 1.6, 8)]),
+      W(86, [G('wardshell', 3, 6), G('chitter', 4, 5, 9), G('chitter', 2, 5, 15), G('gnat', 2, 1.5, 2)]),
+      W(128, [G('roach', 4, 4.5), G('wardshell', 4, 5.5, 8), G('nightcap', 2, 6, 14), G('gnat', 2, 1.5, 6), G('skitter', 3, 0.7, 17)]),
+      // three chitter groups land in three lanes, and an Assassin pair tests the back row
+      W(170, [G('roach', 4, 4.5), G('wardshell', 4, 5, 6), G('chitter', 5, 4, 12), G('chitter', 3, 4.5, 8), G('chitter', 3, 4.5, 3), G('nightcap', 2, 6, 18), G('skitter', 3, 0.7, 24)]),
     ],
   },
   {
-    id: 23, world: 5, idx: 4, name: 'Stone in the Stream', hpMul: 2.25,
+    id: 23, world: 5, idx: 4, name: 'Stone in the Stream', hpMul: 2.14,
     blurb: 'One will not be moved. The other will not be caught on the first strike. Your favorite tricks are openers now.',
-    tip: 'NEW FOES: the Boulder Toad is immune to displacement — a Gale Fern gust washes over it like weather, and it must simply be damaged down. The Iron Nightstalker dashes like a Nightcap Assassin, but an iron plate eats the first hit of every pass — Sentinel Bloom\u2019s counter clangs off — then it bursts your back row and bounds away to re-arm. Soften the plate with something cheap and let the second hit be the real one.',
+    tip: 'NEW FOES: the Boulder Toad is immune to displacement — a Gale Fern gust washes over it like weather, and it must simply be damaged down. The Iron Nightstalker dashes like a Nightcap Assassin, but an iron plate eats the first hit of every pass — Sentinel Bloom’s counter clangs off — then it bursts your back row and bounds away to re-arm. Soften the plate with something cheap and let the second hit be the real one.',
     addPool: ['toad', 'nightstalker', 'nightcap', 'gnat'],
     waves: [
       W(12, [G('gnat', 3, 1.6)]),
-      W(48, [G('toad', 2, 6), G('gnat', 2, 1.6, 8)]),
-      W(90, [G('nightstalker', 2, 5), G('gnat', 2, 1.5, 8)]),
-      W(132, [G('toad', 2, 6), G('nightstalker', 2, 5, 7), G('chitter', 1, 0, 13)]),
-      W(178, [G('nightstalker', 3, 4.5), G('toad', 3, 5, 6), G('ranger', 2, 6, 14)]),
+      W(46, [G('toad', 3, 6), G('gnat', 3, 1.6, 8)]),
+      W(86, [G('nightstalker', 2, 5), G('gnat', 2, 1.5, 8)]),
+      W(128, [G('toad', 3, 6), G('nightstalker', 3, 5, 7), G('chitter', 2, 5, 13), G('gnat', 2, 1.4, 2)]),
+      W(172, [G('nightstalker', 2, 10), G('nightstalker', 1, 0, 10), G('chitter', 6, 3.5, 10), G('toad', 3, 5, 6), G('ranger', 2, 6, 20), G('skitter', 3, 0.7, 3)]),
     ],
   },
   {
-    id: 24, world: 5, idx: 5, name: 'The Reckoning Crown', hpMul: 2.1, boss: 'hollowking',
+    id: 24, world: 5, idx: 5, name: 'The Reckoning Crown', hpMul: 2.05, boss: 'hollowking',
     blurb: 'The King returns wearing every answer you leaned on — and the blight now knows what each one is worth.',
     tip: 'BOSS: the same three-phase King, but his court has learned your kit — Regrowth Husks knit over your bursts, Cinder Golems half your fire, Roaches shrug your spray, Toads ignore your gusts, Nightstalkers eat your ripostes, and Wardshell Grubs no-sell your ambushes. One plant no longer solves a lane; mix damage types and roles, and save the enrage window for everything you have.',
     addPool: ['regrow', 'golem', 'roach', 'toad', 'nightstalker', 'wardshell'],
     waves: [
-      W(12, [G('gnat', 2, 2), G('regrow', 2, 4.5, 8)]),
-      W(50, [G('golem', 1), G('roach', 2, 5, 6)]),
-      W(92, [G('toad', 2, 6), G('nightstalker', 2, 5, 6), G('wardshell', 1, 0, 13)]),
-      W(134, [G('regrow', 3, 4), G('golem', 1, 0, 8), G('wardshell', 2, 6, 10)]),
-      W(178, [G('hollowking', 1), G('toad', 1, 0, 14), G('nightstalker', 2, 5, 22), G('roach', 2, 6, 29), G('gnat', 3, 1.4, 36)]),
+      // deliberately light opener: ONE Regrow (a pair at t20 forces a wall in
+      // the bulb-lane before any defender is funded, pops a snare at ~t80, and
+      // the Nightstalker wave then rolls that empty lane)
+      W(12, [G('gnat', 2, 2), G('regrow', 1, 0, 8)]),
+      // opener court kept to two lanes / three tanks — five tanks here left no
+      // nectar for the Gale answer by t100. The missing bodies are in w4.
+      W(66, [G('golem', 1), G('roach', 2, 8, 8), G('nightcap', 2, 9, 28)]),
+      // The first Nightstalker wave stays in ONE lane (two dashes 10s apart —
+      // one Gale's 6s gust cycle handles both), and starts at t112: before
+      // that, the early tanks consume the bank and the reactive third Fern
+      // lands ~10s too late on most lane rolls.
+      // ONE stalker in the first wave: a gust-recharge-spaced pair that rolls
+      // into an uncovered lane on a tight-economy seed breaches twice (first
+      // pass pops the snare, second pass walks the empty lane).
+      W(112, [G('toad', 2, 6), G('nightstalker', 1, 0, 6), G('wardshell', 1, 0, 16)]),
+      // pre-King crescendo carries the opener's missing density, plus the
+      // third stalker. Last spawn lands at ~t178 (W152 + d16 + 10s gap),
+      // leaving a genuine 12s transition window before the Crown at t190.
+      W(152, [G('regrow', 5, 4), G('golem', 2, 7, 8), G('wardshell', 3, 6, 10), G('nightcap', 3, 8, 2), G('nightstalker', 2, 10, 16)]),
+      // King at t190 (12s after the last pre-boss spawn — a real transition
+      // window); the court files in from +14s onward, one role at a time,
+      // with four Nightstalkers spread across distinct lanes 8s apart so no
+      // single Fern's Gust cycle is asked to cover two dashes.
+      W(190, [G('hollowking', 1), G('toad', 1, 0, 16), G('nightstalker', 1, 0, 14), G('nightstalker', 2, 10, 22), G('nightstalker', 1, 0, 30), G('nightstalker', 1, 0, 38), G('nightcap', 2, 7, 46), G('roach', 3, 7, 46), G('nightcap', 2, 7, 56), G('nightstalker', 2, 10, 66), G('gnat', 3, 1.4, 80)]),
     ],
   },
 ];
@@ -1093,6 +1162,10 @@ export function defaultLoadoutFor(level: LevelDef): FloraKey[] {
   add('bramble');
   // hard requirements first — the enemies nothing else can answer
   if (threats.has('drifter') || threats.has('colossus')) add('sentinel');
+  // the King's rotating ward hard-counters any single-channel tray — the
+  // alternating Prism is a requirement on both King fights, including the
+  // Reckoning court where Batch-3 picks otherwise eat every tray slot
+  if (threats.has('hollowking')) add('prism');
   if (threats.has('grub')) { add('cinderpod'); add('cactus'); }
   if (threats.has('larva')) add('deeproot');
   if (threats.has('ranger')) add('bulwark');
@@ -1103,20 +1176,23 @@ export function defaultLoadoutFor(level: LevelDef): FloraKey[] {
   // must keep both damage channels AND both hit rhythms alive. These picks run
   // above the Batch-2 rules so a batch-3 threat's answer can't be crowded out
   // of the six-slot tray by a rule that would only duplicate a plant anyway. ──
-  // A Regrowth Husk can't knit while it is being hit at all — steady streams.
-  if (threats.has('regrow')) add('emberlash');
+  // On the Reckoning finale the King takes a hard-requirement slot above; among
+  // Batch-3 answers, breach threats (Nightstalker) and hard-damage taxes
+  // (Golem/Roach) outrank comforts — base Thornvines already stream Regrowth
+  // Husks and grind Boulder Toads, so Emberlash/Cactus can fall off a 6-tray.
   // The Golem halves burn and the Roach floors small hits — 80-damage swings
   // of raw physical go through both of them whole.
   if (threats.has('golem') || threats.has('roach')) add('ironbark');
-  // The Toad cannot be shoved — a pierce volley grinds it and its friends.
-  if (threats.has('toad')) add('cactus');
   // The Nightstalker re-arms after its burst — a gust cancels the whole sprint.
   if (threats.has('nightstalker')) add('gale');
+  // A Regrowth Husk can't knit while it is being hit at all — steady streams.
+  if (threats.has('regrow')) add('emberlash');
   // A Wardshell's tile ward eats ONE hit, however cheap — needles spend it free.
   if (threats.has('wardshell')) add('needlereed');
+  // The Toad cannot be shoved — a pierce volley grinds it and its friends.
+  if (threats.has('toad')) add('cactus');
   // ── Flora Batch 2: the Hollow Crown answers, strongest first ──
-  // The King wards one damage channel at a time; Prism Bud is never on the wrong one.
-  if (threats.has('hollowking')) add('prism');
+  // (Prism Bud for the King is added with the hard requirements above.)
   // A Grovemaw Slug eats statuses — raw burst has nothing for it to absorb.
   if (threats.has('slug')) add('ironbark');
   // Displacement works on things that shrug off root — and cancels a Nightcap sprint.

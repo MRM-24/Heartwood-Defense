@@ -544,12 +544,14 @@ export function PauseOverlay({ onResume, onRestart, onQuit }: { onResume: () => 
 
 export function WinOverlay({
   stars,
+  snaresLeft,
   isLast,
   onNext,
   onReplay,
   onMap,
 }: {
   stars: number;
+  snaresLeft?: number;
   isLast: boolean;
   onNext: () => void;
   onReplay: () => void;
@@ -569,7 +571,7 @@ export function WinOverlay({
         ))}
       </div>
       <p className="mt-2 font-ui text-[13px] font-semibold text-[#9db08f]">
-        {stars === 3 ? 'Flawless — not a single Root Snare was spent.' : stars === 2 ? 'The snares held, mostly. A flawless run earns a third star.' : 'Victory, but at a cost. The Vale remembers.'}
+        {stars === 3 ? (snaresLeft === 5 ? 'Flawless — not a single Root Snare was spent.' : 'A third star — the Heart Tree stands nearly untouched.') : stars === 2 ? 'The snares held, mostly. Keep every Root Snare buried for a third star.' : 'Victory, but at a cost. The Vale remembers.'}
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         {!isLast && <ThornButton primary small onClick={onNext}>NEXT LEVEL <ChevronRight className="h-4 w-4" /></ThornButton>}

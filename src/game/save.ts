@@ -1,4 +1,5 @@
 import { LEVELS } from './data';
+import { starsForLevel } from './types';
 
 const KEY = 'heartwood-defense-save-v1';
 
@@ -30,7 +31,7 @@ export function persist(data: SaveData) {
 }
 
 export function recordWin(save: SaveData, levelId: number, snaresLeft: number): SaveData {
-  const stars = snaresLeft >= 5 ? 3 : snaresLeft >= 3 ? 2 : 1;
+  const stars = starsForLevel(LEVELS[levelId], snaresLeft);
   const next: SaveData = {
     ...save,
     maxLevel: Math.max(save.maxLevel, Math.min(LEVELS.length - 1, levelId + 1)),
