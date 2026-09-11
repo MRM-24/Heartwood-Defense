@@ -2,21 +2,117 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover lets the app paint under the notch while we pad the
+         safe areas with env(safe-area-inset-*); zoom is never disabled. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>Heartwood Defense — Flora vs. the Blightspawn</title>
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230c1710'/%3E%3Cpath d='M32 18 C 24 8 10 14 10 27 C 10 39 22 47 32 55 C 42 47 54 39 54 27 C 54 14 40 8 32 18 Z' fill='%23ffd76a' stroke='%230a140f' stroke-width='3'/%3E%3Cpath d='M32 55 C 32 46 30 40 26 34' stroke='%230c1710' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"
+    <meta
+      name="description"
+      content="A lane-defense game set in a living forest. Plant Flora across five lanes, harvest Nectar, and hold back ten waves of Blightspawn before they reach the Heart Tree. Plays offline."
     />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- ── installable app ─────────────────────────────────────────────── -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0c1710" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Heartwood" />
+    <meta name="application-name" content="Heartwood Defense" />
+
+    <!-- ── social ──────────────────────────────────────────────────────── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Heartwood Defense — Flora vs. the Blightspawn" />
+    <meta
+      property="og:description"
+      content="Hold five lanes against the Blight with 20 hand-drawn Flora. No downloads, no assets — play it in the browser, install it like an app."
+    />
+    <meta property="og:image" content="/icons/icon-512.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Fonts load without blocking first paint: the stylesheet is fetched as
+         print media, then flipped to all once it lands. System fallbacks in
+         index.css keep the layout identical if the network is slow or gone. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Outfit:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Outfit:wght@400;500;600;700;800&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Outfit:wght@400;500;600;700;800&display=swap"
+      />
+    </noscript>
+
+    <style>
+      /* Paint the forest before React mounts (and before fonts land) so a cold
+         start on mobile never flashes white. */
+      html,
+      body {
+        margin: 0;
+        background: #070c08;
+        color: #e6f2de;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: radial-gradient(110% 80% at 50% 0%, #1b3320 0%, #0d1a11 48%, #060c08 100%);
+        font-family: system-ui, sans-serif;
+        letter-spacing: 0.4em;
+        font-size: 12px;
+        font-weight: 700;
+        color: #7f9a85;
+      }
+      #boot .sprout {
+        width: 54px;
+        height: 54px;
+        animation: bootpulse 1.6s ease-in-out infinite;
+      }
+      @keyframes bootpulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.85;
+        }
+        50% {
+          transform: scale(1.08);
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot .sprout {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="boot">
+      <svg class="sprout" viewBox="0 0 64 64" aria-hidden="true">
+        <path
+          d="M32 18 C 26 12 14 13 13 22 C 12 31 22 39 32 48 C 42 39 52 31 51 22 C 50 13 38 12 32 18 Z"
+          fill="#ffd76a"
+          stroke="#0a140f"
+          stroke-width="2.4"
+          stroke-linejoin="round"
+        />
+      </svg>
+      WAKING THE VALE…
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -10,7 +10,14 @@
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "icons": "node scripts/icons.mjs",
+    "test:engine": "esbuild scripts/test.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/test.cjs && node node_modules/.cache/test.cjs",
+    "test:ui": "esbuild scripts/ssr.tsx --bundle --platform=node --format=cjs --jsx=automatic --loader:.tsx=tsx --outfile=node_modules/.cache/ssr.cjs && node node_modules/.cache/ssr.cjs",
+    "test:dom": "esbuild scripts/dom.ts --bundle --platform=node --format=cjs --jsx=automatic --loader:.tsx=tsx --external:jsdom --outfile=node_modules/.cache/dom.cjs && node node_modules/.cache/dom.cjs",
+    "test": "npm run test:engine && npm run test:ui && npm run test:dom",
+    "sim": "esbuild scripts/sim.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/sim.cjs && node node_modules/.cache/sim.cjs",
+    "sim:novice": "esbuild scripts/novice.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/novice.cjs && node node_modules/.cache/novice.cjs"
   },
   "dependencies": {
     "clsx": "2.1.1",
@@ -25,6 +32,7 @@
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.1.1",
+    "jsdom": "^30.0.1",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3",
     "vite": "7.3.2",

@@ -23,7 +23,20 @@ binary assets**.
 - **Boss fights** — the Rotback Brute splits into swarms; the Withered Colossus has
   three phases and calls adds; the Hollow King switches a whole damage channel off
   for five seconds at a time and enrages below a quarter HP.
-- **2× speed toggle, pause, restart, keyboard shortcuts.**
+- **2× speed toggle, pause, restart, keyboard shortcuts.** Full keyboard play:
+  arrow keys walk the menus, **Enter** selects, **Esc** backs out of anything
+  (menus, dialogs, the Field Guide, a paused battle) and the Android/system back
+  gesture does the same thing.
+- **Menu click sounds** — every button, card and tray slot answers with a tuned
+  WebAudio blip (select, confirm, back, denied). No audio files, same synth as
+  the rest of the game.
+- **Installable PWA** — a manifest, generated icons, an offline service worker
+  and a first-visit install offer that remembers your answer. Installed, it runs
+  full-screen with no browser chrome and no network.
+- **Built for phones** — a mobile-first layout (status bar → board → seed tray in
+  the thumb zone), 44px+ touch targets, safe-area padding for notches and home
+  indicators, haptics on plant/reject, screen-wake lock during a battle, and no
+  page zoom/scroll fighting the grid.
 - **A real main menu** — *Continue* drops you into the first level you have not
   cleared, *New Game* wipes the campaign behind a confirmation, *Level Select*
   opens the world map, and the sound toggle lives right on the title screen.
@@ -34,7 +47,8 @@ binary assets**.
 - **Progress saved locally** (stars, unlocks, mute preference, guide entries) via
   `localStorage`. A New Game clears stars but keeps the guide filled in.
 - **Fully procedural audio** — WebAudio-synthesized SFX plus a generated ambient
-  soundtrack. No audio files to download.
+  soundtrack, including UI feedback and a resume-friendly mix. No audio files to
+  download.
 
 ## 🌱 The Flora
 
@@ -153,11 +167,51 @@ across World 3 (levels 11–14).
 
 ## 🎮 Controls
 
-- **Click / tap** a Flora card (or press **1–6**), then click a grid cell to plant.
-- **X** or the shovel button — dig up a plant.
-- **F** — toggle 2× game speed. **Esc** — pause / deselect, and closes an open Field Guide.
-- **Right-click** cancels the current selection.
-- The speaker button in the HUD mutes both music and sound effects.
+### Menus
+
+| Key | Action |
+| --- | --- |
+| **↑ ↓ ← →** | Move focus through the menu (geometric nearest-neighbour, so card grids behave like grids) |
+| **Enter / Space** | Activate the focused button |
+| **Tab / Shift+Tab** | Cycle focus; dialogs trap focus and hand it back on close |
+| **Esc** | Go back one step — close a dialog or the Field Guide, leave a screen, resume a battle |
+
+The **system back button** (Android hardware/gesture back, a browser back swipe)
+runs the same stack, so the two never disagree. Every dismissed surface is one
+history entry: back closes it, and the app never leaves the page by accident.
+
+### In battle
+
+| Key | Action |
+| --- | --- |
+| **1–6** | Select that seed-tray slot |
+| **X** | Arm the shovel (dig up a plant, no refund) |
+| **F** | Toggle 1× / 2× speed |
+| **R** | Restart the level |
+| **M** | Mute / unmute everything |
+| **G** | Open the Field Guide |
+| **Esc** | Cancel an armed Flora or shovel first; otherwise pause |
+| **Right-click / long-press context** | Cancel the current selection |
+
+On a phone, tap a seed-tray slot and then tap a tile to plant it; the tray tells
+you what it is waiting for. Music and sound effects both follow the speaker
+button on the title screen and in the HUD.
+
+## 🔊 Sound Design
+
+`src/game/sfx.ts` synthesises everything, and `src/game/uiSound.ts` is a single
+delegated listener that gives the whole app one click language:
+
+| Sound | Fires on |
+| --- | --- |
+| `tick` | Keyboard focus move (arrows / Tab) |
+| `confirm` | Any button press — instantly, on `pointerdown` |
+| `back` | Back / cancel buttons |
+| `open` / `close` | Field Guide and sheets |
+| `denied` | Disabled control pressed |
+
+Elements can override their sound with `data-sfx="none"` (handled on their own)
+or any other sound name; nothing has to be wired per component.
 
 ## 🛠 Tech Stack
 
@@ -165,7 +219,12 @@ across World 3 (levels 11–14).
 - [Vite 7](https://vite.dev) with [`vite-plugin-singlefile`](https://github.com/richardtallent/vite-plugin-singlefile) — the production build inlines all JS/CSS into one `dist/index.html`
 - [Tailwind CSS 4](https://tailwindcss.com) for UI styling
 - Web Audio API for all SFX and the background score (`src/game/sfx.ts`, `src/game/bgm.ts`)
-- All art is inline SVG (`src/components/sprites.tsx`)
+- All art is inline SVG (`src/components/sprites.tsx`); the PWA icons are generated
+  as PNGs by `scripts/icons.mjs` using nothing but `node:zlib`
+- PWA: web app manifest + an offline service worker (`public/`), install-state
+  machine in `src/game/pwa.ts`
+- Testing: `node:test`-style assertion scripts for the engine, render-to-string for
+  every screen, and [jsdom](https://github.com/jsdom/jsdom) for the runtime smoke test
 
 ## 🚀 Getting Started
 
@@ -176,7 +235,26 @@ npm install      # install dependencies
 npm run dev      # start the dev server (http://localhost:5173)
 npm run build    # type-check, then build the single-file production bundle
 npm run preview  # serve the production build locally
+
+npm run icons    # regenerate the PWA icons (public/icons/) — no image tools needed
+npm test         # engine tests + UI render checks + DOM runtime smoke test
+npm run sim      # scripted average player clears all 25 levels (balance harness)
+npm run sim:novice
 ```
+
+### Trying the installed app locally
+
+The service worker and install prompt are production features (a worker in front
+of Vite's dev server only gets in the way of HMR), so:
+
+```bash
+npm run build && npm run preview   # then open http://localhost:4173
+```
+
+Chrome/Edge/Android will offer the in-app **Install** button; iOS Safari gets the
+Share-sheet walkthrough instead. Whatever you choose is remembered
+(`heartwood-install-pref-v1` in `localStorage`) and the title screen keeps an
+**Install** button for anyone who picked "not now".
 
 The production build lives in `dist/index.html` — you can open it directly in a
 browser or host it on any static server.
@@ -205,31 +283,65 @@ vercel --prod   # production deployment
 Every push to the default branch redeploys automatically; pull requests get
 preview URLs.
 
+## 📱 Installing as an App
+
+The build is a proper PWA, so it can be installed without an app store:
+
+- **Chrome / Edge / Android** — `beforeinstallprompt` is captured and the app
+  shows its own **Install** offer on the first visit.
+- **iOS Safari** — no install event exists, so the offer becomes a short
+  Share-sheet → *Add to Home Screen* walkthrough.
+- **Remembered choice** — "not now" and "don't ask again" are stored separately
+  (`heartwood-install-pref-v1`). The offer never auto-opens twice, but the title
+  screen keeps an **Install** button so nobody has to hunt through browser menus.
+- **Offline** — `public/sw.js` precaches the shell; navigations are
+  network-first with the cached shell as fallback, so a flight-mode launch still
+  plays. Bump `VERSION` in that file to roll the cache.
+- **Installed behaviour** — standalone display, full-bleed theme colour, safe-area
+  padding for the notch/home indicator, and the install nudge hides itself.
+
 ## 📁 Project Structure
 
 ```
 src/
 ├── App.tsx              # screen routing (title → worlds → levels → loadout → game)
-├── main.tsx             # React entry point
-├── index.css            # Tailwind + custom animations
+├── main.tsx             # React entry point: UI sounds, back keys, service worker, splash
+├── index.css            # design tokens, safe areas, animation library, reduced-motion
 ├── components/
 │   ├── Board.tsx        # battle grid, enemies, projectiles, FX rendering
-│   ├── GameScreen.tsx   # fixed-tick game loop, input, scaling, overlays
-│   ├── Hud.tsx          # nectar counter, flora tray, boss bar, controls
+│   ├── GameScreen.tsx   # fixed-tick game loop, input, scaling, overlays, wake lock
+│   ├── Hud.tsx          # nectar counter, flora tray, boss bar, controls (roomy + compact)
+│   ├── InstallPrompt.tsx# first-visit install offer (native prompt or iOS walkthrough)
 │   ├── Screens.tsx      # title menu, world/level select, loadout, Field Guide + entry pages, end screens
+│   ├── ui.tsx           # buttons, icon buttons, bottom-sheet/dialog shell, focus trap
 │   └── sprites.tsx      # every Flora, enemy, and the Heart Tree as SVG
-└── game/
-    ├── types.ts         # shared types & tuning constants
-    ├── data.ts          # Flora/enemy stats, worlds, level definitions
-    ├── engine.ts        # pure simulation: spawning, combat, waves, bosses
-    ├── save.ts          # localStorage save data (progress, stars, mute, Field Guide codex)
-    ├── sfx.ts           # WebAudio sound-effect synth
-    └── bgm.ts           # WebAudio procedural background music
+├── game/
+│   ├── types.ts         # shared types & tuning constants
+│   ├── data.ts          # Flora/enemy stats, worlds, level definitions
+│   ├── engine.ts        # pure simulation: spawning, combat, waves, bosses
+│   ├── save.ts          # localStorage save data (progress, stars, mute, Field Guide codex)
+│   ├── backstack.ts     # one back stack for Escape + the system back button (+ history mirror)
+│   ├── pwa.ts           # install state machine, service-worker registration, splash teardown
+│   ├── sfx.ts           # WebAudio sound-effect synth (battle SFX + UI clicks)
+│   ├── uiSound.ts       # delegated click/focus sound + haptics for the whole UI
+│   └── bgm.ts           # WebAudio procedural background music
+├── hooks/
+│   └── useArrowNav.ts   # arrow-key/D-pad focus movement for menus
 scripts/
 ├── sim.ts               # headless balance harness: a scripted player runs every level
 ├── novice.ts            # weaker scripted player for difficulty tuning
 ├── test.ts              # engine smoke tests
-└── ssr.tsx              # render-to-string check
+├── ssr.tsx              # render-to-string check for every screen
+├── dom.ts               # jsdom runtime smoke test (navigation, back stack, sounds, phone layout)
+└── icons.mjs            # generates the PWA icons as PNGs with nothing but node:zlib
+public/
+├── manifest.webmanifest # installable app metadata
+├── sw.js                # offline shell (network-first navigation, cached assets)
+├── favicon.svg
+└── icons/               # generated app icons (any + maskable + apple-touch)
+skills/
+├── ui-ux-pro-max.skill  # the original design skill upload (zip archive)
+└── ui-ux-pro-max/       # …unpacked to markdown, with notes in skills/README.md
 ```
 
 ## 🎵 Audio
@@ -242,7 +354,15 @@ All audio is generated with the Web Audio API at runtime:
   and echoing plucks. It starts on the first click/keypress (browsers block audio
   before a user gesture) and follows the HUD mute button.
 
-## ⚖️ Balance Tooling
+## ⚖️ Testing & Balance Tooling
+
+```bash
+npm test           # everything below
+npm run test:engine  # 362 engine assertions (combat, waves, bosses, save data)
+npm run test:ui      # 61 render checks: every screen, both HUD layouts, guide states
+npm run test:dom     # jsdom runtime smoke: navigation, Escape/back, click sounds,
+                     # focus movement, history mirroring, the phone battle layout
+```
 
 `scripts/sim.ts` bundles a scripted average-skill player and plays all 25 levels
 headlessly — useful after tuning enemy stats. `scripts/novice.ts` runs the same
@@ -250,9 +370,8 @@ levels with only the three starter plants, which is the check that a new world i
 actually harder than the last one:
 
 ```bash
-npx esbuild scripts/sim.ts --bundle --platform=node --format=cjs --outfile=/tmp/sim.cjs && node /tmp/sim.cjs
-npx esbuild scripts/novice.ts --bundle --platform=node --format=cjs --outfile=/tmp/novice.cjs && node /tmp/novice.cjs
-npx esbuild scripts/test.ts --bundle --platform=node --format=cjs --outfile=/tmp/test.cjs && node /tmp/test.cjs
+npm run sim
+npm run sim:novice
 ```
 
 ---
