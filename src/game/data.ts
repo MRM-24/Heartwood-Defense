@@ -1,4 +1,4 @@
-import type { EnemyKey, EnemyStats, FloraKey, FloraStats, LevelDef, WaveDef, WaveGroup } from './types';
+import type { EnemyKey, EnemyStats, FloraKey, FloraStats, LevelDef, WaveDef, WaveGroup, WorldId } from './types';
 
 // ─── FLORA ──────────────────────────────────────────────────────────────────
 export const FLORA: Record<FloraKey, FloraStats> = {
@@ -159,7 +159,7 @@ export const FLORA: Record<FloraKey, FloraStats> = {
     hp: 90,
     role: 'Burn Beam',
     desc: 'Holds a continuous 8-damage-per-second ember beam on whatever is frontmost in its lane. There is no projectile and no wind-up, so nothing is wasted when the target changes — a Molt Wisp that splits into two halves is simply burned from the first tick on the new one.',
-    attack: { dmg: 8, interval: 1, beam: true },
+    attack: { dmg: 8, interval: 1, beam: true, fire: true },
   },
   needlereed: {
     key: 'needlereed',
@@ -527,6 +527,92 @@ export const ENEMIES: Record<EnemyKey, EnemyStats> = {
     desc: 'Three phases. It sheds Molt Wisps as it walks; below two-thirds HP it shuts a whole damage channel off for 5s at a time, alternating between single-target strikes and area damage; below a quarter HP it enrages — attacking twice as fast and taking twice the damage.',
     counter: 'A loadout that can switch: raw strikes AND splash, and the nerve to wait out a ward',
   },
+
+  // ── BATCH 3: THE HOLLOW RECKONING ──────────────────────────────────────────
+  // Engineered to answer Flora Batch 2 piece by piece: every plant whose gimmick
+  // bought a free win under the Crown has exactly one Blightspawn here spending
+  // it. None of them are stat bumps — each one re-rules a whole class of hit.
+  regrow: {
+    key: 'regrow',
+    name: 'Regrowth Husk',
+    hp: 100,
+    speed: 0.21,
+    dmg: 10,
+    atkInterval: 1.2,
+    spacing: 0.62,
+    scale: 1.05,
+    regrowHp: 15,
+    regrowEvery: 2,
+    desc: 'Every 2s it goes unhit it knits 15 HP back shut. Punishes slow-cooldown burst hitters like Ironbark Titan that leave gaps between shots — the wound closes a chunk of your damage before the next swing ever lands. Fire a steady stream at it and there is never a quiet beat to heal on.',
+    counter: 'Sustained fire — Thornvine stacks, Emberlash beams; lone big swings feed it',
+  },
+  golem: {
+    key: 'golem',
+    name: 'Cinder Golem',
+    hp: 140,
+    speed: 0.13,
+    dmg: 16,
+    atkInterval: 1.3,
+    spacing: 0.8,
+    scale: 1.35,
+    fireResist: 0.5,
+    desc: 'Its fired-clay shell drinks 50% of every burn/fire-type hit — an Emberlash beam smoulders at half light, and Prism Bud\u2019s fire burst lands for 9, not 18. A direct resistance to the Crown\u2019s favourite damage; the Prism\u2019s physical bolt and every raw strike go in whole. Explosions are concussive, not burning — Cinderpods hit at full.',
+    counter: 'Physical damage alongside the burn — Ironbark, Thornvine, the Prism\u2019s other half',
+  },
+  roach: {
+    key: 'roach',
+    name: 'Bulwark Roach',
+    hp: 110,
+    speed: 0.2,
+    dmg: 12,
+    atkInterval: 1.0,
+    spacing: 0.6,
+    scale: 1.05,
+    hitFloor: 10,
+    desc: 'A per-hit damage floor: any single hit under 10 raw damage skitters off its shell and lands for 1. A Needle Reed volley spends all five needles for five damage. One Thornvine bite is worth six of them. Continuous damage is a stream, not a volley — an Emberlash tick never counts as a fresh hit, so burn still works.',
+    counter: 'Fewer, harder hits — Ironbark, Thornvine, Cinderpod blasts',
+  },
+  toad: {
+    key: 'toad',
+    name: 'Boulder Toad',
+    hp: 160,
+    speed: 0.12,
+    dmg: 14,
+    atkInterval: 1.4,
+    spacing: 0.85,
+    scale: 1.3,
+    knockImmune: true,
+    desc: 'Squat, dense, and rooted by instinct — it is immune to knockback and displacement outright. A Gale Fern\u2019s gust washes over it like weather and the toad never shifts a finger-width. Nothing on the tray shoves this one off the line; it has to be damaged down.',
+    counter: 'Direct damage — the fern is wasted Nectar here',
+  },
+  nightstalker: {
+    key: 'nightstalker',
+    name: 'Iron Nightstalker',
+    hp: 130,
+    speed: 0.3,
+    dmg: 20,
+    atkInterval: 1.0,
+    spacing: 0.55,
+    scale: 1,
+    dashThrough: 2,
+    dashShield: true,
+    retreatAfterDash: 2.5,
+    desc: 'Same headlong dash as a Nightcap Assassin — past your front two plants and one 20-damage burst into the back row — but it carries a one-time iron plate: the first hit it takes on each dash is simply not there. Sentinel Bloom\u2019s counter-strike clangs off the plating instead of biting. Then it does not settle in: it bounds back east, re-arms, and comes again.',
+    counter: 'Spend the plate on a cheap hit, then land the real one — or gust it out of the sprint',
+  },
+  wardshell: {
+    key: 'wardshell',
+    name: 'Wardshell Grub',
+    hp: 100,
+    speed: 0.19,
+    dmg: 9,
+    atkInterval: 1.0,
+    spacing: 0.7,
+    scale: 1.15,
+    tileWard: true,
+    desc: 'A surprise ward: the first hit it receives after entering a new tile deals zero damage — one time, per tile. An Ambush Fern springs on it and comes up completely empty every step it takes. The ward is spent the instant anything touches it, soft or hard, so anything that lands twice eats this gimmick alive.',
+    counter: 'Any hit spends it once per tile, then the real damage follows — Needle Reed springs wards for free',
+  },
 };
 
 export const ENEMY_ORDER: EnemyKey[] = [
@@ -552,6 +638,13 @@ export const ENEMY_ORDER: EnemyKey[] = [
   'marauder',
   'slug',
   'hollowking',
+  // ── Batch 3: the Hollow Reckoning ──
+  'regrow',
+  'golem',
+  'roach',
+  'toad',
+  'nightstalker',
+  'wardshell',
 ];
 
 // ─── CAMPAIGN ───────────────────────────────────────────────────────────────
@@ -565,7 +658,7 @@ const G = (type: EnemyKey, count: number, gap = 1.6, startDelay = 0, catapult = 
 const W = (at: number, groups: WaveGroup[]): WaveDef => ({ at, groups });
 
 export interface WorldDef {
-  id: 1 | 2 | 3 | 4;
+  id: WorldId;
   name: string;
   sub: string;
   hue: string; // accent for UI
@@ -576,6 +669,7 @@ export const WORLDS: WorldDef[] = [
   { id: 2, name: 'Frostmire Hollow', sub: 'The blight adapts. So must you.', hue: '#7fd4ff' },
   { id: 3, name: 'Rootbound Depths', sub: 'It has learned how you defend. Time to defend differently.', hue: '#d8a8ff' },
   { id: 4, name: 'The Hollow Crown', sub: 'It studied the counters you were given. It has answers now.', hue: '#ffc46b' },
+  { id: 5, name: 'The Hollow Reckoning', sub: 'It learned your newest answers — and went shopping for new ones.', hue: '#ff9368' },
 ];
 
 export const LEVELS: LevelDef[] = [
@@ -853,6 +947,80 @@ export const LEVELS: LevelDef[] = [
       W(168, [G('hollowking', 1), G('marauder', 2, 7, 14), G('nightcap', 3, 4, 20), G('chitter', 2, 6, 28), G('gnat', 3, 1.4, 36)]),
     ],
   },
+  // ── WORLD 5: THE HOLLOW RECKONING ──
+  // Batch 3 enemies debut here. There is no Flora Batch 3 — the whole point is
+  // that the tray you already own closes this loop, as a MIX. Each level spends
+  // one Flora Batch 2 trick and dares you to lean on it anyway:
+  //   5-1 Regrowth Husk    → burst with gaps between swings feeds it
+  //   5-2 Cinder Golem     → the burn half of your kit hits for half
+  //   5-3 Bulwark Roach    → spray efficiency floors to chipping
+  //   5-4 Toad + Nightstalker → displacement and ripostes find nothing to grab
+  //   5-5 Wardshell Grub + the King → traps spring on nothing, plates eat first hits
+  {
+    id: 20, world: 5, idx: 1, name: 'The Knitting Dark', hpMul: 2.15,
+    blurb: 'The husks come back together while you blink. Something has been timing your swings.',
+    tip: 'NEW FOE: the Regrowth Husk knits 15 HP back for every 2s it is not hit. An Ironbark Titan swinging every 3s watches its own damage close up between shots. Do not give it a quiet beat: stacked Thornvines (1.4s), a held Emberlash beam, and anything that fires in volleys keep the wound open.',
+    addPool: ['gnat', 'regrow', 'beetle'],
+    waves: [
+      W(12, [G('gnat', 2, 2)]),
+      W(48, [G('regrow', 2, 5), G('gnat', 2, 1.6, 8)]),
+      W(90, [G('regrow', 3, 4.5), G('beetle', 1, 0, 10)]),
+      W(132, [G('regrow', 3, 4), G('chitter', 2, 6, 8), G('gnat', 2, 1.5, 14)]),
+      W(176, [G('regrow', 4, 3.5), G('beetle', 2, 6, 6), G('wisp', 2, 5, 12)]),
+    ],
+  },
+  {
+    id: 21, world: 5, idx: 2, name: 'Half the Fire', hpMul: 2.2,
+    blurb: 'Something walked out of the kiln and kept the ash. Your embers still bite it — about half as hard.',
+    tip: 'NEW FOE: the Cinder Golem takes only 50% damage from burn and fire — the Emberlash beam smoulders at 4/s and Prism Bud\u2019s fire burst lands for 9. But its clay drinks no physical damage: Ironbark strikes, Thornvine thorns, and every other half of the Prism go in whole. Cinderpod blasts are concussion, not fire — those work too. Bring both channels.',
+    addPool: ['golem', 'wisp', 'gnat'],
+    waves: [
+      W(12, [G('gnat', 3, 1.6)]),
+      W(50, [G('golem', 1), G('gnat', 2, 1.6, 6)]),
+      W(92, [G('golem', 2, 7), G('wisp', 3, 4, 6)]),
+      W(136, [G('golem', 2, 6), G('marauder', 2, 5, 8), G('gnat', 3, 1.5, 14)]),
+      W(180, [G('golem', 3, 5.5), G('wisp', 4, 3, 8), G('skitter', 3, 0.7, 16)]),
+    ],
+  },
+  {
+    id: 22, world: 5, idx: 3, name: 'Small Change', hpMul: 2.2,
+    blurb: 'A shell that counts your needles as pennies — and a grub that takes one free hit per tile.',
+    tip: 'NEW FOES: the Bulwark Roach floors any single hit under 10 damage down to 1 — a whole Needle Reed volley spends itself for five. Hit it hard, not often: Thornvines, Ironbark, Cinderpods (an Emberlash beam is a stream, not a volley — that one still works). The Wardshell Grub nullifies the FIRST hit in every new tile it steps into: an Ambush Fern springs for zero. Let anything cheap pop the ward, then bury it.',
+    addPool: ['roach', 'wardshell', 'chitter', 'gnat'],
+    waves: [
+      W(12, [G('gnat', 2, 2)]),
+      W(48, [G('roach', 2, 5), G('gnat', 2, 1.6, 8)]),
+      W(90, [G('wardshell', 2, 6), G('chitter', 1, 0, 10)]),
+      W(132, [G('roach', 3, 4.5), G('wardshell', 2, 6, 8), G('gnat', 2, 1.5, 14)]),
+      W(176, [G('roach', 3, 4), G('wardshell', 3, 5, 6), G('chitter', 2, 6, 12)]),
+    ],
+  },
+  {
+    id: 23, world: 5, idx: 4, name: 'Stone in the Stream', hpMul: 2.25,
+    blurb: 'One will not be moved. The other will not be caught on the first strike. Your favorite tricks are openers now.',
+    tip: 'NEW FOES: the Boulder Toad is immune to displacement — a Gale Fern gust washes over it like weather, and it must simply be damaged down. The Iron Nightstalker dashes like a Nightcap Assassin, but an iron plate eats the first hit of every pass — Sentinel Bloom\u2019s counter clangs off — then it bursts your back row and bounds away to re-arm. Soften the plate with something cheap and let the second hit be the real one.',
+    addPool: ['toad', 'nightstalker', 'nightcap', 'gnat'],
+    waves: [
+      W(12, [G('gnat', 3, 1.6)]),
+      W(48, [G('toad', 2, 6), G('gnat', 2, 1.6, 8)]),
+      W(90, [G('nightstalker', 2, 5), G('gnat', 2, 1.5, 8)]),
+      W(132, [G('toad', 2, 6), G('nightstalker', 2, 5, 7), G('chitter', 1, 0, 13)]),
+      W(178, [G('nightstalker', 3, 4.5), G('toad', 3, 5, 6), G('ranger', 2, 6, 14)]),
+    ],
+  },
+  {
+    id: 24, world: 5, idx: 5, name: 'The Reckoning Crown', hpMul: 2.1, boss: 'hollowking',
+    blurb: 'The King returns wearing every answer you leaned on — and the blight now knows what each one is worth.',
+    tip: 'BOSS: the same three-phase King, but his court has learned your kit — Regrowth Husks knit over your bursts, Cinder Golems half your fire, Roaches shrug your spray, Toads ignore your gusts, Nightstalkers eat your ripostes, and Wardshell Grubs no-sell your ambushes. One plant no longer solves a lane; mix damage types and roles, and save the enrage window for everything you have.',
+    addPool: ['regrow', 'golem', 'roach', 'toad', 'nightstalker', 'wardshell'],
+    waves: [
+      W(12, [G('gnat', 2, 2), G('regrow', 2, 4.5, 8)]),
+      W(50, [G('golem', 1), G('roach', 2, 5, 6)]),
+      W(92, [G('toad', 2, 6), G('nightstalker', 2, 5, 6), G('wardshell', 1, 0, 13)]),
+      W(134, [G('regrow', 3, 4), G('golem', 1, 0, 8), G('wardshell', 2, 6, 10)]),
+      W(178, [G('hollowking', 1), G('toad', 1, 0, 14), G('nightstalker', 2, 5, 22), G('roach', 2, 6, 29), G('gnat', 3, 1.4, 36)]),
+    ],
+  },
 ];
 
 // Flora unlocks: level id at which the flora becomes available. Flora Batch 1
@@ -879,6 +1047,13 @@ export const FLORA_UNLOCKS: { level: number; flora: FloraKey[] }[] = [
   { level: 17, flora: ['sentinelbloom'] }, // vs Nightcap Assassin
   { level: 18, flora: ['ambush'] }, // vs Fen Wretch
   { level: 19, flora: ['prism'] }, // vs The Hollow King's rotating ward
+  // Enemy Batch 3 (World 5) ships with NO new Flora on purpose: the Reckoning
+  // is a test of the 20 you already have. Nothing unlocks from 20 onward.
+  { level: 20, flora: [] },
+  { level: 21, flora: [] },
+  { level: 22, flora: [] },
+  { level: 23, flora: [] },
+  { level: 24, flora: [] },
 ];
 
 export function unlockedFloraFor(levelId: number): FloraKey[] {
@@ -924,6 +1099,21 @@ export function defaultLoadoutFor(level: LevelDef): FloraKey[] {
   if (threats.has('imp') || threats.has('thief')) { add('watchvine'); add('snaptrap'); }
   if (threats.has('husk')) add('bindweed');
   if (threats.has('warden') || threats.has('beetle') || threats.has('skitter')) add('cactus');
+  // ── Enemy Batch 3: the Reckoning — there is no single answer, so the tray
+  // must keep both damage channels AND both hit rhythms alive. These picks run
+  // above the Batch-2 rules so a batch-3 threat's answer can't be crowded out
+  // of the six-slot tray by a rule that would only duplicate a plant anyway. ──
+  // A Regrowth Husk can't knit while it is being hit at all — steady streams.
+  if (threats.has('regrow')) add('emberlash');
+  // The Golem halves burn and the Roach floors small hits — 80-damage swings
+  // of raw physical go through both of them whole.
+  if (threats.has('golem') || threats.has('roach')) add('ironbark');
+  // The Toad cannot be shoved — a pierce volley grinds it and its friends.
+  if (threats.has('toad')) add('cactus');
+  // The Nightstalker re-arms after its burst — a gust cancels the whole sprint.
+  if (threats.has('nightstalker')) add('gale');
+  // A Wardshell's tile ward eats ONE hit, however cheap — needles spend it free.
+  if (threats.has('wardshell')) add('needlereed');
   // ── Flora Batch 2: the Hollow Crown answers, strongest first ──
   // The King wards one damage channel at a time; Prism Bud is never on the wrong one.
   if (threats.has('hollowking')) add('prism');

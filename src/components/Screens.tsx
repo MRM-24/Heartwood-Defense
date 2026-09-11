@@ -2,7 +2,7 @@ import { ArrowLeft, ChevronRight, Droplets, Hourglass, Lock, Play, RotateCcw, Sc
 import type { ReactNode } from 'react';
 import { ENEMIES, FLORA, FLORA_ORDER, LOADOUT_SLOTS, LEVELS, WORLDS, floraUnlockedAt, unlockedFloraFor } from '../game/data';
 import { levelEnemyIntel } from '../game/engine';
-import type { FloraKey, LevelDef } from '../game/types';
+import type { FloraKey, LevelDef, WorldId } from '../game/types';
 import { EnemySprite, FloraSprite, HeartTree } from './sprites';
 
 // ── shared ambient backdrop ─────────────────────────────────────────────────
@@ -109,7 +109,7 @@ export function TitleScreen({ onPlay, onHow, hasSave }: { onPlay: () => void; on
         </div>
         <div className="mt-10 flex items-center gap-2 font-ui text-[12px] font-semibold tracking-wider text-[#62788] text-opacity-70">
           <Shield className="h-4 w-4 text-[#57c178]" />
-          <span className="text-[#6b8571]">20 levels · 4 worlds · 20 Flora · 21 Blightspawn · 3 bosses</span>
+          <span className="text-[#6b8571]">25 levels · 5 worlds · 20 Flora · 27 Blightspawn · 3 bosses</span>
         </div>
       </div>
     </Backdrop>
@@ -182,6 +182,14 @@ export function GuideModal({ onClose }: { onClose: () => void }) {
             until something enters its tile, then hits for 120. And the <b className="text-[#7fd4ff]">Prism Bud</b> alternates damage channel every other shot, so the
             Hollow King's ward is never a full answer.
           </Rule>
+          <Rule n="10" title="The Reckoning spends your favorites">
+            In the Hollow Reckoning the blight answers the answer-plants. The <b className="text-[#a3f2a0]">Regrowth Husk</b> knits 15 HP back every 2s it goes
+            unhit — burst with gaps between swings feeds it; streams starve it. The <b className="text-[#ffb37a]">Cinder Golem</b> drinks half of every burn hit,
+            so pair fire with physical. The <b className="text-[#e8d9a0]">Bulwark Roach</b> floors any single hit under 10 down to 1 — spray bounces off it.
+            The <b className="text-[#d8d2c0]">Boulder Toad</b> cannot be displaced at all. The <b className="text-[#cdd6de]">Iron Nightstalker</b>'s plate eats
+            the first hit of every dash — even the Sentinel Bloom's counter — and it retreats to re-arm. And the <b className="text-[#d8b4ff]">Wardshell Grub</b>
+            nullifies the first hit inside every new tile, so an Ambush Fern springs for nothing. No single plant solves these lanes; the tray has to run as a mix.
+          </Rule>
         </div>
         <h3 className="mb-3 mt-7 font-display text-xl font-bold text-[#ffd76a]">The Flora</h3>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
@@ -222,13 +230,13 @@ export function WorldSelect({
 }: {
   maxLevel: number;
   stars: Record<number, number>;
-  onPick: (world: 1 | 2 | 3 | 4) => void;
+  onPick: (world: WorldId) => void;
   onBack: () => void;
 }) {
   return (
     <Backdrop>
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 py-10">
-        <Header kicker="CHOOSE YOUR GROUND" title="Four Worlds of the Vale" />
+        <Header kicker="CHOOSE YOUR GROUND" title="Five Worlds of the Vale" />
         <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-2">
           {WORLDS.map((w) => {
             const levels = LEVELS.filter((l) => l.world === w.id);
@@ -285,7 +293,7 @@ export function LevelSelect({
   onPick,
   onBack,
 }: {
-  world: 1 | 2 | 3 | 4;
+  world: WorldId;
   maxLevel: number;
   stars: Record<number, number>;
   onPick: (level: LevelDef) => void;
@@ -296,7 +304,10 @@ export function LevelSelect({
   return (
     <Backdrop>
       <div className="mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-center px-6 py-10">
-        <Header kicker={`WORLD ${world} — ${w.name.toUpperCase()}`} title={w.id === 1 ? 'Hold the Vale' : 'Break the Hollow'} />
+        <Header
+          kicker={`WORLD ${world} — ${w.name.toUpperCase()}`}
+          title={w.id === 1 ? 'Hold the Vale' : w.id === 5 ? 'Answer What You Taught' : 'Break the Hollow'}
+        />
         <div className="flex w-full flex-col gap-3">
           {levels.map((l) => {
             const locked = l.id > maxLevel;
@@ -448,6 +459,12 @@ export function LoadoutScreen({
                         {ek === 'imp' && <span className="rounded bg-[#2e1a2e] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#ff9ad6]">DROPS IN</span>}
                         {e.smashWindup && <span className="rounded bg-[#2e1c10] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#ffb37a]">ONE-HIT SMASH</span>}
                         {e.grabEvery && <span className="rounded bg-[#1c2634] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#a8c9ff]">STEALS</span>}
+                        {e.regrowHp !== undefined && <span className="rounded bg-[#12241a] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#a3f2a0]">REGENERATES</span>}
+                        {!!e.fireResist && <span className="rounded bg-[#2e1c10] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#ffb37a]">DRINKS FIRE</span>}
+                        {!!e.hitFloor && <span className="rounded bg-[#26251f] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#e8d9a0]">SMALL HITS GRAZE</span>}
+                        {e.knockImmune && <span className="rounded bg-[#1f2326] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#d8d2c0]">UNPUSHABLE</span>}
+                        {e.dashShield && <span className="rounded bg-[#1c2634] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#cdd6de]">ARMORED DASH</span>}
+                        {e.tileWard && <span className="rounded bg-[#221a2e] px-1.5 font-ui text-[9px] font-extrabold tracking-widest text-[#d8b4ff]">WARD PER TILE</span>}
                       </div>
                       <p className="truncate font-ui text-[11px] text-[#9d8fae]">{e.desc}</p>
                       <p className="font-ui text-[11px] font-bold text-[#a3f2a0]">Counter: {e.counter}</p>

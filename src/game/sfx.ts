@@ -125,6 +125,13 @@ export function sfxEvent(name: string) {
     case 'strike': tone(180, 0.14, 'square', 0.13, 70); noise(0.12, 0.1, 1600); break; // …and lands its one burst
     case 'ward': tone(1568, 0.3, 'sine', 0.07, 1046); tone(2093, 0.24, 'sine', 0.04, undefined, 0.06); break; // a damage channel shuts
     case 'enrage': tone(70, 0.9, 'sawtooth', 0.16, 40); noise(0.6, 0.13, 260); tone(140, 0.8, 'square', 0.07, 70, 0.1); break;
+    // ── Enemy Batch 3 ──
+    case 'regrow': tone(392, 0.24, 'sine', 0.06, 588); tone(588, 0.2, 'sine', 0.045, 784, 0.1); break; // a wound knitting shut
+    case 'resist': noise(0.16, 0.06, 3400); tone(620, 0.1, 'sine', 0.04, 340); break; // fire meeting clay
+    case 'graze': tone(2300, 0.04, 'square', 0.03, 1700); break; // a needle skittering off a shell
+    case 'anchor': tone(62, 0.26, 'sawtooth', 0.13, 40); noise(0.14, 0.08, 320); break; // a gust against granite
+    case 'plate': tone(1650, 0.08, 'square', 0.1, 780); tone(2200, 0.06, 'square', 0.05, 1300, 0.03); noise(0.07, 0.06, 2900); break; // steel eating a hit
+    case 'shroud': tone(1046, 0.22, 'sine', 0.05, 1568); noise(0.12, 0.04, 4200); break; // a ward cracking away
     // ── Flora Batch 2 ──
     case 'bolt': tone(180, 0.16, 'square', 0.11, 90); noise(0.1, 0.08, 600); break; // ironbark swing
     case 'beam': tone(420, 0.18, 'sawtooth', 0.035, 520); noise(0.1, 0.025, 2600); break; // emberlash hum (throttled)
