@@ -24,7 +24,15 @@ binary assets**.
   three phases and calls adds; the Hollow King switches a whole damage channel off
   for five seconds at a time and enrages below a quarter HP.
 - **2× speed toggle, pause, restart, keyboard shortcuts.**
-- **Progress saved locally** (stars, unlocks, mute preference) via `localStorage`.
+- **A real main menu** — *Continue* drops you into the first level you have not
+  cleared, *New Game* wipes the campaign behind a confirmation, *Level Select*
+  opens the world map, and the sound toggle lives right on the title screen.
+- **A collecting Field Guide** — the Flora **and** the Blightspawn, tabbed, with
+  a full write-up per entry. Anything you have not met yet is drawn as a black
+  silhouette: the shape stays visible, the name and stats do not. Every card is
+  clickable, from the title screen, the level map, or the pause menu.
+- **Progress saved locally** (stars, unlocks, mute preference, guide entries) via
+  `localStorage`. A New Game clears stars but keeps the guide filled in.
 - **Fully procedural audio** — WebAudio-synthesized SFX plus a generated ambient
   soundtrack. No audio files to download.
 
@@ -147,7 +155,7 @@ across World 3 (levels 11–14).
 
 - **Click / tap** a Flora card (or press **1–6**), then click a grid cell to plant.
 - **X** or the shovel button — dig up a plant.
-- **F** — toggle 2× game speed. **Esc** — pause / deselect.
+- **F** — toggle 2× game speed. **Esc** — pause / deselect, and closes an open Field Guide.
 - **Right-click** cancels the current selection.
 - The speaker button in the HUD mutes both music and sound effects.
 
@@ -208,13 +216,13 @@ src/
 │   ├── Board.tsx        # battle grid, enemies, projectiles, FX rendering
 │   ├── GameScreen.tsx   # fixed-tick game loop, input, scaling, overlays
 │   ├── Hud.tsx          # nectar counter, flora tray, boss bar, controls
-│   ├── Screens.tsx      # title / world / level / loadout / guide / end screens
+│   ├── Screens.tsx      # title menu, world/level select, loadout, Field Guide + entry pages, end screens
 │   └── sprites.tsx      # every Flora, enemy, and the Heart Tree as SVG
 └── game/
     ├── types.ts         # shared types & tuning constants
     ├── data.ts          # Flora/enemy stats, worlds, level definitions
     ├── engine.ts        # pure simulation: spawning, combat, waves, bosses
-    ├── save.ts          # localStorage save data (progress, stars, mute)
+    ├── save.ts          # localStorage save data (progress, stars, mute, Field Guide codex)
     ├── sfx.ts           # WebAudio sound-effect synth
     └── bgm.ts           # WebAudio procedural background music
 scripts/

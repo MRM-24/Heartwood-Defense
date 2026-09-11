@@ -3,9 +3,10 @@ import { renderToString } from 'react-dom/server';
 import App from '../src/App';
 import Board from '../src/components/Board';
 import Hud from '../src/components/Hud';
-import { GuideModal, LevelSelect, LoadoutScreen, LoseOverlay, PauseOverlay, TitleScreen, WinOverlay, WorldSelect } from '../src/components/Screens';
+import { CodexEntry, ConfirmDialog, GuideModal, LevelSelect, LoadoutScreen, LoseOverlay, PauseOverlay, TitleScreen, WinOverlay, WorldSelect } from '../src/components/Screens';
 import { createGame, placeFlora, spawnEnemy, stepGame } from '../src/game/engine';
 import { ENEMY_ORDER, FLORA_ORDER, LEVELS, defaultLoadoutFor } from '../src/game/data';
+import { codexEnemies, codexFlora, levelsCleared, totalStars, type SaveData } from '../src/game/save';
 import type { EnemyKey } from '../src/game/types';
 
 let count = 0;
@@ -21,18 +22,113 @@ function check(name: string, fn: () => unknown) {
   }
 }
 
+// ── menu + field guide surfaces ────────────────────────────────────────────
+// A mid-campaign save: worlds 1–2 played, so most of the roster is still shadow.
+const partSave: SaveData = { maxLevel: 8, stars: { 0: 3, 1: 2, 5: 1 }, muted: false, codex: { flora: [], enemies: [] } };
+const partFlora = codexFlora(partSave);
+const partEnemies = codexEnemies(partSave);
+const fullSave: SaveData = { maxLevel: 24, stars: {}, muted: true, codex: { flora: [], enemies: [] } };
+const emptySave: SaveData = { maxLevel: 0, stars: {}, muted: false, codex: { flora: [], enemies: [] } };
+
+function assert(name: string, html: string, needles: string[]) {
+  for (const n of needles) if (!html.includes(n)) throw new Error(`missing "${n}"`);
+  return html;
+}
+
 check('App(title)', () => renderToString(<App />));
-check('TitleScreen', () => renderToString(<TitleScreen hasSave onPlay={() => {}} onHow={() => {}} />));
-check('GuideModal', () => renderToString(<GuideModal onClose={() => {}} />));
+check('TitleScreen(new save)', () =>
+  assert(
+    'BEGIN',
+    renderToString(
+      <TitleScreen
+        hasSave={false} resume="World 1-1 · First Bloom" stars={0} cleared={0}
+        floraKnown={3} floraTotal={FLORA_ORDER.length} enemiesKnown={3} enemiesTotal={ENEMY_ORDER.length}
+        muted={false} onContinue={() => {}} onNewGame={() => {}} onLevels={() => {}} onGuide={() => {}} onToggleMute={() => {}}
+      />,
+    ),
+    ['BEGIN THE VIGIL', 'LEVEL SELECT', 'FIELD GUIDE', 'NEW GAME', 'No save found'],
+  ),
+);
+check('TitleScreen(mid save)', () =>
+  assert(
+    'CONTINUE',
+    renderToString(
+      <TitleScreen
+        hasSave resume="World 2-4 · The Hollow Choir" stars={totalStars(partSave)} cleared={levelsCleared(partSave)}
+        floraKnown={partFlora.size} floraTotal={FLORA_ORDER.length} enemiesKnown={partEnemies.size} enemiesTotal={ENEMY_ORDER.length}
+        muted onContinue={() => {}} onNewGame={() => {}} onLevels={() => {}} onGuide={() => {}} onToggleMute={() => {}}
+      />,
+    ),
+    ['CONTINUE THE VIGIL', 'WORLD 2-4', 'MUTED', 'LEVEL SELECT', 'NEW GAME'],
+  ),
+);
+check('ConfirmDialog(new game)', () =>
+  assert('dlg', renderToString(<ConfirmDialog title="Start Over?" body="wipe" confirmLabel="START OVER" onConfirm={() => {}} onCancel={() => {}} />), [
+    'Start Over?', 'KEEP MY PROGRESS', 'START OVER',
+  ]),
+);
+check('GuideModal(fresh save — everything shadowed)', () => {
+  const freshFlora = codexFlora(emptySave);
+  const freshEnemies = codexEnemies(emptySave);
+  return assert(
+    'guide',
+    renderToString(<GuideModal initialTab="flora" unlockedFlora={freshFlora} unlockedEnemies={freshEnemies} onClose={() => {}} />),
+    [`Field Guide`, 'THE RULES', 'FLORA', 'BLIGHTSPAWN', `${freshFlora.size}/${FLORA_ORDER.length}`, `${freshEnemies.size}/${ENEMY_ORDER.length}`, 'Silhouettes', 'Thornvine', 'Undiscovered'],
+  );
+});
+check('GuideModal(rules)', () => renderToString(<GuideModal initialTab="rules" unlockedFlora={partFlora} unlockedEnemies={partEnemies} onClose={() => {}} />));
+check('GuideModal(flora tab — mixed known/unknown)', () =>
+  assert(
+    'flora tab',
+    renderToString(<GuideModal initialTab="flora" unlockedFlora={partFlora} unlockedEnemies={partEnemies} onClose={() => {}} />),
+    // known entries show their real names…
+    ['Thornvine', 'Glowbulb', 'Bramblewall', 'Spitting Cactus', 'Frostcap Mushroom', 'Sunflower Sentinel',
+      // …and the ones ahead of the player stay silhouetted and nameless
+      'Undiscovered', 'brightness(0)'],
+  ),
+);
+check('GuideModal(enemy tab — mixed known/unknown)', () =>
+  assert(
+    'enemy tab',
+    renderToString(<GuideModal initialTab="enemies" unlockedFlora={partFlora} unlockedEnemies={partEnemies} onClose={() => {}} />),
+    ['Creeper Gnat', 'Husk Beetle', 'Unknown species', 'brightness(0)'],
+  ),
+);
+check('GuideModal(endgame — nothing hidden)', () => {
+  const html = renderToString(<GuideModal initialTab="enemies" unlockedFlora={codexFlora(fullSave)} unlockedEnemies={codexEnemies(fullSave)} onClose={() => {}} />);
+  if (html.includes('Unknown species')) throw new Error('a fully-played save still has shadowed entries');
+  return assert('all revealed', html, ['The Hollow King', 'Wardshell Grub']);
+});
+check('CodexEntry(known flora)', () =>
+  assert('known', renderToString(<CodexEntry kind={{ type: 'flora', key: 'thornvine' }} known onBack={() => {}} />), [
+    'Thornvine', 'COST', 'nectar', 'SHOOTER', 'ATTACK', '18 dmg / 1.4s', '100 HP',
+  ]),
+);
+check('CodexEntry(hidden flora)', () =>
+  assert('hidden', renderToString(<CodexEntry kind={{ type: 'flora', key: 'prism' }} known={false} onBack={() => {}} />), [
+    'UNIDENTIFIED', 'NOT YET ENCOUNTERED', '4-5', '? ? ?', 'brightness(0)',
+  ]),
+);
+check('CodexEntry(known enemy)', () =>
+  assert('known enemy', renderToString(<CodexEntry kind={{ type: 'enemy', key: 'grub' }} known onBack={() => {}} />), [
+    'Stoneback Grub', 'SPLASH ONLY', 'SIGHTED IN', 'Counter:',
+  ]),
+);
+check('CodexEntry(hidden enemy)', () =>
+  assert('hidden enemy', renderToString(<CodexEntry kind={{ type: 'enemy', key: 'hollowking' }} known={false} onBack={() => {}} />), [
+    'UNIDENTIFIED', 'World 4-5', 'brightness(0)',
+  ]),
+);
 check('WorldSelect', () => renderToString(<WorldSelect maxLevel={3} stars={{ 0: 3, 1: 2 }} onPick={() => {}} onBack={() => {}} />));
-check('LevelSelect w2', () => renderToString(<LevelSelect world={2} maxLevel={8} stars={{}} onPick={() => {}} onBack={() => {}} />));
+check('LevelSelect w2', () => renderToString(<LevelSelect world={2} maxLevel={8} stars={{}} onPick={() => {}} onBack={() => {}} guideFlora={partFlora} guideEnemies={partEnemies} />));
 check('WorldSelect(all 5)', () => renderToString(<WorldSelect maxLevel={24} stars={{ 15: 3, 19: 2, 24: 1 }} onPick={() => {}} onBack={() => {}} />));
-check('LevelSelect w4', () => renderToString(<LevelSelect world={4} maxLevel={19} stars={{}} onPick={() => {}} onBack={() => {}} />));
-check('LevelSelect w5', () => renderToString(<LevelSelect world={5} maxLevel={24} stars={{}} onPick={() => {}} onBack={() => {}} />));
+check('LevelSelect w4', () => renderToString(<LevelSelect world={4} maxLevel={19} stars={{}} onPick={() => {}} onBack={() => {}} guideFlora={partFlora} guideEnemies={partEnemies} />));
+check('LevelSelect w5', () => renderToString(<LevelSelect world={5} maxLevel={24} stars={{}} onPick={() => {}} onBack={() => {}} guideFlora={partFlora} guideEnemies={partEnemies} />));
 check('LoadoutScreen w4 boss', () => renderToString(<LoadoutScreen level={LEVELS[19]} picked={defaultLoadoutFor(LEVELS[19])} setPicked={() => {}} onStart={() => {}} onBack={() => {}} />));
 check('LoadoutScreen w5 boss', () => renderToString(<LoadoutScreen level={LEVELS[24]} picked={defaultLoadoutFor(LEVELS[24])} setPicked={() => {}} onStart={() => {}} onBack={() => {}} />));
 check('LoadoutScreen', () => renderToString(<LoadoutScreen level={LEVELS[6]} picked={defaultLoadoutFor(LEVELS[6])} setPicked={() => {}} onStart={() => {}} onBack={() => {}} />));
 check('PauseOverlay', () => renderToString(<PauseOverlay onResume={() => {}} onRestart={() => {}} onQuit={() => {}} />));
+check('PauseOverlay(+guide)', () => assert('pause', renderToString(<PauseOverlay onGuide={() => {}} onResume={() => {}} onRestart={() => {}} onQuit={() => {}} />), ['FIELD GUIDE']));
 check('WinOverlay', () => renderToString(<WinOverlay stars={3} isLast={false} onNext={() => {}} onReplay={() => {}} onMap={() => {}} />));
 check('LoseOverlay', () => renderToString(<LoseOverlay lane={2} onRetry={() => {}} onMap={() => {}} />));
 

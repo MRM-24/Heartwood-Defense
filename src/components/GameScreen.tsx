@@ -4,7 +4,8 @@ import { setSfxMuted, sfxEvent } from '../game/sfx';
 import { starsForLevel, TICK, type FloraKey, type GameState, type LevelDef } from '../game/types';
 import Board, { STAGE_H, STAGE_W } from './Board';
 import Hud from './Hud';
-import { LoseOverlay, PauseOverlay, WinOverlay } from './Screens';
+import { GuideModal, LoseOverlay, PauseOverlay, WinOverlay } from './Screens';
+import type { EnemyKey } from '../game/types';
 
 const TOTAL_H = 116 + STAGE_H; // hud + board
 
@@ -12,13 +13,16 @@ interface Props {
   level: LevelDef;
   loadout: FloraKey[];
   muted: boolean;
+  /** Field Guide entries the player has catalogued — the rest render as silhouettes. */
+  guideFlora: Set<FloraKey>;
+  guideEnemies: Set<EnemyKey>;
   onMute: () => void;
   onWin: (snaresLeft: number) => void;
   onExit: () => void;
   onNext: (() => void) | null;
 }
 
-export default function GameScreen({ level, loadout, muted, onMute, onWin, onExit, onNext }: Props) {
+export default function GameScreen({ level, loadout, muted, guideFlora, guideEnemies, onMute, onWin, onExit, onNext }: Props) {
   const [attempt, setAttempt] = useState(0);
   const gs = useMemo<GameState>(() => createGame(level, loadout), [level, loadout, attempt]);
   const gsRef = useRef(gs);
@@ -26,11 +30,14 @@ export default function GameScreen({ level, loadout, muted, onMute, onWin, onExi
 
   const [, setFrame] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [guide, setGuide] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [scale, setScale] = useState(1);
   const reported = useRef(false);
   const speedRef = useRef(speed);
   speedRef.current = speed;
+  const guideRef = useRef(guide);
+  guideRef.current = guide;
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
   const outerRef = useRef<HTMLDivElement>(null);
@@ -107,6 +114,8 @@ export default function GameScreen({ level, loadout, muted, onMute, onWin, onExi
     const onKey = (e: KeyboardEvent) => {
       const s = gsRef.current;
       const k = e.key.toLowerCase();
+      // the Field Guide owns Escape while it is open
+      if (guideRef.current) return;
       if (k >= '1' && k <= '6') {
         const idx = Number(k) - 1;
         const key = s.loadout[idx];
@@ -187,6 +196,7 @@ export default function GameScreen({ level, loadout, muted, onMute, onWin, onExi
           </div>
           {paused && gs.status === 'playing' && (
             <PauseOverlay
+              onGuide={() => setGuide(true)}
               onResume={() => setPaused(false)}
               onRestart={() => {
                 setPaused(false);
@@ -221,6 +231,13 @@ export default function GameScreen({ level, loadout, muted, onMute, onWin, onExi
           )}
         </div>
       </div>
+      {guide && (
+        <GuideModal
+          unlockedFlora={guideFlora}
+          unlockedEnemies={guideEnemies}
+          onClose={() => setGuide(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1138,6 +1138,38 @@ export function floraUnlockedAt(levelId: number): FloraKey[] {
   return FLORA_UNLOCKS.filter((u) => u.level === levelId).flatMap((u) => u.flora);
 }
 
+/** Level id at which a Flora first becomes available (0 = a starter). */
+export function floraUnlockLevel(key: FloraKey): number {
+  const hit = FLORA_UNLOCKS.find((u) => u.flora.includes(key));
+  return hit ? hit.level : 0;
+}
+
+/** Lowest level id whose waves/adds field a Blightspawn (null = never used). */
+export function enemyFirstLevel(key: EnemyKey): number | null {
+  for (const l of LEVELS) if (levelThreats(l).has(key)) return l.id;
+  return null;
+}
+
+/** Every level id that fields a given Blightspawn (for the Field Guide entry). */
+export function enemyLevels(key: EnemyKey): number[] {
+  return LEVELS.filter((l) => levelThreats(l).has(key)).map((l) => l.id);
+}
+
+/**
+ * Everything the Field Guide is allowed to reveal once the player has been
+ * shown a given level: every Flora available there, and every Blightspawn that
+ * level's intel names. Used to grow the save's codex — the guide never shows a
+ * shape the campaign has not introduced yet.
+ */
+export function discoveriesForLevel(levelId: number): { flora: FloraKey[]; enemies: EnemyKey[] } {
+  const cap = Math.min(Math.max(levelId, 0), LEVELS.length - 1);
+  const enemies: EnemyKey[] = [];
+  for (let id = 0; id <= cap; id++) {
+    for (const k of levelThreats(LEVELS[id])) if (!enemies.includes(k)) enemies.push(k);
+  }
+  return { flora: unlockedFloraFor(cap), enemies };
+}
+
 /** Every enemy key a level can field, waves + boss adds. */
 export function levelThreats(level: LevelDef): Set<EnemyKey> {
   const set = new Set<EnemyKey>();

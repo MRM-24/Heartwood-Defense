@@ -1,7 +1,8 @@
 // Mechanics verification: each spec rule, tested against the real engine.
 import { createGame, damageEnemy, levelEnemyIntel, placeFlora, shovelAt, spawnEnemy, stepGame, totalEnemies } from '../src/game/engine';
 const SPAWN_X_EDGE = 9.4; // must match the engine's SPAWN_X
-import { ENEMIES, FLORA, LEVELS, defaultLoadoutFor, unlockedFloraFor } from '../src/game/data';
+import { ENEMIES, ENEMY_ORDER, FLORA, FLORA_ORDER, LEVELS, defaultLoadoutFor, discoveriesForLevel, enemyFirstLevel, enemyLevels, floraUnlockLevel, unlockedFloraFor } from '../src/game/data';
+import { DEFAULT_SAVE, codexEnemies, codexFlora, discoverLevel, levelsCleared, loadSave, recordWin, resetProgress, resumeLevelId, totalStars } from '../src/game/save';
 import type { EnemyKey, FloraKey, LevelDef } from '../src/game/types';
 
 let passed = 0, failed = 0;
@@ -1325,6 +1326,88 @@ function run(s: ReturnType<typeof createGame>, secs: number, each?: () => void) 
   run(s3, 3);
   ok(g3.hp === g3.maxHp, 'the first spore is spent on the dome…');
   ok(g3.slowUntil > s3.t, '…but the chill still lands — the ward blocks damage, not effects');
+}
+
+
+// ── 52. Field Guide unlocks: what the campaign has shown is all you may see ──
+{
+  console.log('Field Guide unlocks');
+  const d0 = discoveriesForLevel(0);
+  ok(d0.flora.length === 3, `level 1-1 reveals exactly the three starters (${d0.flora.join(',')})`);
+  ok(d0.flora.includes('thornvine') && d0.flora.includes('glowbulb') && d0.flora.includes('bramble'), '…and they are the right three');
+  ok(!d0.enemies.includes('hollowking') && !d0.enemies.includes('grub'), 'no later-world Blightspawn leaks into the opening entry');
+  ok(d0.enemies.includes('gnat'), 'the Creeper Gnat of 1-1 is catalogued immediately');
+
+  const d19 = discoveriesForLevel(19);
+  ok(d19.flora.length === FLORA_ORDER.length, `by the Crown finale all ${FLORA_ORDER.length} Flora are unlocked (${d19.flora.length})`);
+  ok(d19.enemies.includes('hollowking'), 'the Hollow King is catalogued once you reach his level');
+  ok(!d19.enemies.includes('wardshell'), '…but Reckoning-only species stay in the dark');
+  ok(discoveriesForLevel(24).enemies.length === ENEMY_ORDER.length, `the last level reveals the whole roster (${discoveriesForLevel(24).enemies.length})`);
+
+  // monotonic: nothing you have seen can go dark again as you advance
+  let monotonic = true;
+  for (let i = 0; i < LEVELS.length - 1; i++) {
+    const a = discoveriesForLevel(i), b = discoveriesForLevel(i + 1);
+    if (!a.flora.every((k) => b.flora.includes(k))) monotonic = false;
+    if (!a.enemies.every((k) => b.enemies.includes(k))) monotonic = false;
+  }
+  ok(monotonic, 'discoveries only ever grow, level to level');
+
+  ok(floraUnlockLevel('thornvine') === 0 && floraUnlockLevel('glowbulb') === 0, 'starters report level 0 as their unlock');
+  ok(floraUnlockLevel('cinderpod') === 11, `Cinderpod unlocks at level 11 (got ${floraUnlockLevel('cinderpod')})`);
+  ok(floraUnlockLevel('prism') === 19, `Prism Bud unlocks at level 19 (got ${floraUnlockLevel('prism')})`);
+  ok(enemyFirstLevel('hollowking') === 19, `the Hollow King first marches at level 19 (got ${enemyFirstLevel('hollowking')})`);
+  ok(enemyFirstLevel('gnat') === 0, 'the gnat is a level 0 sighting');
+  ok(ENEMY_ORDER.every((k) => enemyFirstLevel(k) !== null), 'every catalogued Blightspawn actually appears in some level');
+  ok(ENEMY_ORDER.every((k) => enemyLevels(k).includes(enemyFirstLevel(k)!)), 'and its first sighting is one of its listed levels');
+}
+
+// ── 53. Save layer: codex growth, New Game, and where CONTINUE lands ──
+{
+  console.log('Save / codex');
+  const fresh = { ...DEFAULT_SAVE, codex: { flora: [], enemies: [] } };
+  ok(codexFlora(fresh).size === 3, `a fresh save shows 3 Flora in full (${codexFlora(fresh).size})`);
+  ok(codexEnemies(fresh).size === discoveriesForLevel(0).enemies.length, 'and only the enemies 1-1 fields');
+  ok(resumeLevelId(fresh) === 0, 'CONTINUE on a fresh save starts at level 0');
+
+  // opening a level records what its intel names — and does so only once
+  const opened = discoverLevel(fresh, 12);
+  ok(opened !== fresh, 'opening a level with new intel returns a new save');
+  ok(codexEnemies(opened).has('ranger') && codexEnemies(opened).has('imp'), 'Locust Rangers and Spore Imps are catalogued at 3-3');
+  ok(codexFlora(opened).has('bulwark') && codexFlora(opened).has('watchvine'), '…and the Flora that answer them');
+  ok(discoverLevel(opened, 12) === opened, 're-opening the same level changes nothing (same save object)');
+  ok(discoverLevel(opened, 3) === opened, 'nor does an earlier level');
+
+  // a win advances the campaign and folds its discoveries in
+  const won = recordWin(opened, 12, 5);
+  ok(won.maxLevel === 13, `winning 3-3 unlocks 3-4 (maxLevel=${won.maxLevel})`);
+  ok(won.stars[12] === 3, 'flawless 3-3 is worth three stars');
+  ok(resumeLevelId(won) === 0, `CONTINUE still points at the first uncleared level (${resumeLevelId(won)})`);
+
+  // New Game: stars and progress go, the guide stays filled in
+  const wiped = resetProgress(won);
+  ok(wiped.maxLevel === 0 && Object.keys(wiped.stars).length === 0, 'New Game clears progress and stars');
+  ok(codexEnemies(wiped).has('ranger'), 'the Field Guide keeps the Blightspawn you catalogued');
+  ok(codexFlora(wiped).has('watchvine'), '…and the Flora');
+  ok(wiped.muted === won.muted, 'the audio setting survives too');
+
+  // codex entries count even where progress has not reached them
+  const carried: typeof wiped = { maxLevel: 0, stars: {}, muted: false, codex: { flora: ['prism'], enemies: ['hollowking'] } };
+  ok(codexFlora(carried).has('prism'), 'a codex-only Flora is shown in full without the progress');
+  ok(codexEnemies(carried).has('hollowking'), 'same for a codex-only Blightspawn');
+  ok(!codexFlora(carried).has('ironbark'), 'and an entry in neither stays a silhouette');
+
+  // a fully cleared campaign points CONTINUE at the finale
+  const done: typeof wiped = { maxLevel: 24, stars: {}, muted: false, codex: { flora: [], enemies: [] } };
+  for (let i = 0; i < LEVELS.length - 1; i++) done.stars[i] = 1;
+  ok(resumeLevelId(done) === LEVELS.length - 1, `with everything but the finale cleared, CONTINUE lands there (${resumeLevelId(done)})`);
+  done.stars[LEVELS.length - 1] = 3;
+  ok(resumeLevelId(done) === LEVELS.length - 1, 'and a 100% save still resolves to a real level, not off the end');
+  // 24 levels at one star, plus the finale at three
+  ok(levelsCleared(done) === LEVELS.length && totalStars(done) === (LEVELS.length - 1) * 1 + 3, `progress tallies add up (${levelsCleared(done)} cleared, ${totalStars(done)} stars)`);
+
+  // a corrupt/legacy save must not crash the title screen
+  ok(loadSave().codex.flora.length === 0, 'loadSave() without localStorage falls back to an empty codex');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

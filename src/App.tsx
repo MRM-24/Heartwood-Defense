@@ -1,9 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import GameScreen from './components/GameScreen';
-import { GuideModal, LevelSelect, LoadoutScreen, TitleScreen, WorldSelect } from './components/Screens';
-import { LEVELS, defaultLoadoutFor } from './game/data';
+import { ConfirmDialog, GuideModal, LevelSelect, LoadoutScreen, TitleScreen, WorldSelect } from './components/Screens';
+import { ENEMY_ORDER, FLORA_ORDER, LEVELS, defaultLoadoutFor } from './game/data';
 import { setBgmMuted, startBgm } from './game/bgm';
-import { loadSave, recordWin, setMuted as persistMuted, type SaveData } from './game/save';
+import {
+  codexEnemies,
+  codexFlora,
+  discoverLevel,
+  levelsCleared,
+  loadSave,
+  recordWin,
+  resetProgress,
+  resumeLevelId,
+  setMuted as persistMuted,
+  totalStars,
+  type SaveData,
+} from './game/save';
 import { setSfxMuted } from './game/sfx';
 import type { FloraKey, LevelDef, WorldId } from './game/types';
 
@@ -18,6 +30,7 @@ export default function App() {
   const [save, setSave] = useState<SaveData>(() => loadSave());
   const [screen, setScreen] = useState<Screen>({ name: 'title' });
   const [showGuide, setShowGuide] = useState(false);
+  const [confirmNew, setConfirmNew] = useState(false);
   const [picked, setPicked] = useState<FloraKey[]>([]);
 
   useEffect(() => {
@@ -37,20 +50,26 @@ export default function App() {
     };
   }, []);
 
+  // What the Field Guide is allowed to show in full; everything else is a silhouette.
+  const guideFlora = useMemo(() => codexFlora(save), [save]);
+  const guideEnemies = useMemo(() => codexEnemies(save), [save]);
+
   const hasSave = useMemo(() => save.maxLevel > 0 || Object.keys(save.stars).length > 0, [save]);
+  const resumeId = useMemo(() => resumeLevelId(save), [save]);
+  const resumeLevel = LEVELS[resumeId];
+  const resumeLabel = `World ${resumeLevel.world}-${resumeLevel.idx} · ${resumeLevel.name}`;
 
   const openLoadout = useCallback((level: LevelDef) => {
     // smart default: the classic spine plus unlocked hard counters for this level's intel
     setPicked(defaultLoadoutFor(level));
+    // opening a level's briefing reveals what that level's intel names
+    setSave((sv) => discoverLevel(sv, level.id));
     setScreen({ name: 'loadout', level });
   }, []);
 
-  const handleWin = useCallback(
-    (level: LevelDef, snaresLeft: number) => {
-      setSave((sv) => recordWin(sv, level.id, snaresLeft));
-    },
-    [],
-  );
+  const handleWin = useCallback((level: LevelDef, snaresLeft: number) => {
+    setSave((sv) => recordWin(sv, level.id, snaresLeft));
+  }, []);
 
   const nextLevel = useCallback(
     (level: LevelDef): (() => void) | null => {
@@ -60,6 +79,23 @@ export default function App() {
     },
     [openLoadout],
   );
+
+  // CONTINUE drops you straight into the first level you have not cleared.
+  const continueGame = useCallback(() => {
+    openLoadout(LEVELS[resumeLevelId(save)]);
+  }, [openLoadout, save]);
+
+  // NEW GAME wipes the campaign (the Field Guide keeps its entries) and starts at 1-1.
+  const startNewGame = useCallback(() => {
+    setConfirmNew(false);
+    setSave((sv) => resetProgress(sv));
+    openLoadout(LEVELS[0]);
+  }, [openLoadout]);
+
+  const requestNewGame = useCallback(() => {
+    if (hasSave) setConfirmNew(true);
+    else startNewGame();
+  }, [hasSave, startNewGame]);
 
   const toggleMute = useCallback(() => {
     setSave((sv) => persistMuted(sv, !sv.muted));
@@ -71,10 +107,38 @@ export default function App() {
         <>
           <TitleScreen
             hasSave={hasSave}
-            onPlay={() => setScreen({ name: 'worlds' })}
-            onHow={() => setShowGuide(true)}
+            resume={resumeLabel}
+            stars={totalStars(save)}
+            cleared={levelsCleared(save)}
+            floraKnown={guideFlora.size}
+            floraTotal={FLORA_ORDER.length}
+            enemiesKnown={guideEnemies.size}
+            enemiesTotal={ENEMY_ORDER.length}
+            muted={save.muted}
+            onContinue={continueGame}
+            onNewGame={requestNewGame}
+            onLevels={() => setScreen({ name: 'worlds' })}
+            onGuide={() => setShowGuide(true)}
+            onToggleMute={toggleMute}
           />
-          {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
+          {showGuide && (
+            <GuideModal unlockedFlora={guideFlora} unlockedEnemies={guideEnemies} onClose={() => setShowGuide(false)} />
+          )}
+          {confirmNew && (
+            <ConfirmDialog
+              title="Start Over?"
+              body={
+                <>
+                  This clears your campaign: stars reset and the vale closes back up to
+                  World 1-1. Your <b className="text-[#a3f2a0]">Field Guide</b> entries stay
+                  recorded, so nothing you have already catalogued goes dark again.
+                </>
+              }
+              confirmLabel="START OVER"
+              onConfirm={startNewGame}
+              onCancel={() => setConfirmNew(false)}
+            />
+          )}
         </>
       );
     case 'worlds':
@@ -94,6 +158,8 @@ export default function App() {
           stars={save.stars}
           onPick={openLoadout}
           onBack={() => setScreen({ name: 'worlds' })}
+          guideFlora={guideFlora}
+          guideEnemies={guideEnemies}
         />
       );
     case 'loadout':
@@ -113,6 +179,8 @@ export default function App() {
           level={screen.level}
           loadout={picked}
           muted={save.muted}
+          guideFlora={guideFlora}
+          guideEnemies={guideEnemies}
           onMute={toggleMute}
           onWin={(snaresLeft) => handleWin(screen.level, snaresLeft)}
           onExit={() => setScreen({ name: 'levels', world: screen.level.world })}
