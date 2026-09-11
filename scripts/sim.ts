@@ -1,10 +1,11 @@
 // Headless balance harness: a scripted average-skill player runs every level.
 // Usage: npx esbuild scripts/sim.ts --bundle --platform=node --format=cjs --outfile=/tmp/sim.cjs && node /tmp/sim.cjs
 import { createGame, placeFlora, stepGame } from '../src/game/engine';
-import { FLORA, LEVELS, defaultLoadoutFor } from '../src/game/data';
-import { TICK, type EnemyEnt, type EnemyKey, type FloraKey, type GameState, type LevelDef } from '../src/game/types';
+import { ENEMIES, FLORA, LEVELS, defaultLoadoutFor } from '../src/game/data';
+import { starsForLevel, TICK, type EnemyEnt, type EnemyKey, type FloraKey, type GameState, type LevelDef } from '../src/game/types';
 
 const GLOW_ORDER = [2, 0, 4, 1, 3];
+const isFlying = (e: EnemyEnt) => !!ENEMIES[e.key].flying;
 
 // Threat profile per level — the bot reads the intel like a player would.
 interface Threats {
@@ -22,6 +23,7 @@ interface Threats {
   backline: boolean; // Nightcap Assassin / Fen Wretch — the back row is contested
   slug: boolean; // Grovemaw Slug specifically — wants Ironbark
   marauder: boolean; // Barkskin Marauder specifically — wants Gale Fern
+  stalker: boolean; // Iron Nightstalker — Gust cancels its plate-armoured pass
   king: boolean; // The Hollow King — wants Prism Bud
 }
 function threatsOf(level: LevelDef): Threats {
@@ -42,6 +44,7 @@ function threatsOf(level: LevelDef): Threats {
     backline: set.has('nightcap') || set.has('wretch'),
     slug: set.has('slug'),
     marauder: set.has('marauder'),
+    stalker: set.has('nightstalker'),
     king: set.has('hollowking'),
   };
 }
@@ -86,9 +89,31 @@ function botAct(s: GameState, th: Threats) {
   const splashKey: FloraKey = has('cinderpod') ? 'cinderpod' : 'cactus';
   const foes = (l: number) => s.enemies.filter((e) => e.lane === l);
 
-  // 1) economy first (cap 4 bulbs) — Nectar Lotus only once the lanes are held
+  // 1) economy first (cap 4 bulbs) — Nectar Lotus only once the lanes are held.
+  // A human stops scaling the moment a ground enemy is inside col 6 of an
+  // un-walled lane; the bot used to plant bulbs anyway and lose the lane to a
+  // plain walker 40 seconds before the boss.
+  const galeGoal = 2;
   const glowCount = countAll(s, 'glowbulb');
-  if (has('glowbulb') && glowCount < 4 && s.nectar >= 55) {
+  const TANKY_WALKERS = new Set(['beetle', 'warden', 'grub', 'husk', 'marauder', 'slug', 'regrow', 'golem', 'roach', 'wardshell', 'toad', 'nightstalker']);
+  const emergencyLane = (() => {
+    for (let l = 0; l < 5; l++) {
+      if (s.grid[l].some((f) => f && !FLORA[f.key].attack && f.key === 'bramblewall')) continue;
+      if (
+        s.enemies.some(
+          (e) => {
+            if (e.lane !== l || e.hp <= 0 || e.burrowed || e.jumpT > 0 || e.dashT > 0 || isFlying(e) || e.chewing) return false;
+            // tanky walkers deserve an early wall; fast trash is allowed inside
+            // col 3.5 before scaling pauses — vines usually clear it first
+            return TANKY_WALKERS.has(e.key) ? e.x < 6 : e.x < 3.5;
+          }
+        )
+      )
+        return l;
+    }
+    return -1;
+  })();
+  if (has('glowbulb') && glowCount < 4 && s.nectar >= 55 && emergencyLane < 0) {
     for (const l of GLOW_ORDER) if (tryPlace(s, 'glowbulb', l, [0, 1])) return;
   }
   // Flora Batch 2: the answers that have to exist before the threat arrives.
@@ -105,6 +130,15 @@ function botAct(s: GameState, th: Threats) {
   // could have held the counter may already be planted.
   if (th.grub && countAll(s, splashKey) < 2 && s.nectar >= FLORA[splashKey].cost) {
     for (const l of GLOW_ORDER) if (tryPlace(s, splashKey, l, [3, 2, 4])) return;
+  }
+  // Dash levels (Nightcap / Iron Nightstalker) and root-immune Marauders: a gust
+  // cancels the whole pass, so get at least two Ferns rooted before the wave —
+  // reacting after a Nightcap is behind the wall is already too late.
+  if ((th.backline || th.marauder || th.stalker) && has('gale') && countAll(s, 'gale') < galeGoal && s.nectar >= FLORA.gale.cost) {
+    // one Fern per lane — dashes arrive in several lanes at once
+    for (const l of GLOW_ORDER) {
+      if (countFlora(s, l, (k) => k === 'gale') === 0 && tryPlace(s, 'gale', l, [3, 2, 4])) return;
+    }
   }
   if (has('lotus') && countAll(s, 'lotus') < 1 && s.nectar >= 200 && s.t > 45) {
     const held = [0, 1, 2, 3, 4].every((l) => foes(l).length === 0 || countFlora(s, l, (k) => !!FLORA[k].attack) > 0);
@@ -167,11 +201,22 @@ function botAct(s: GameState, th: Threats) {
     if (!boss && (th.imp || th.thief || th.backline) && coversX(s, l, 2) === 0 && s.nectar >= 200 && attackers >= 1) {
       if (tryPlace(s, 'watchvine', l, [2, 1, 3])) return;
     }
-    // Flora Batch 2, lane by lane.
-    if (ground.some((e) => e.key === 'slug') && countFlora(s, l, (k) => k === 'ironbark') === 0) {
+    // Flora Batch 2, lane by lane. Ironbark is the listed counter to both the
+    // status-immune Grovemaw Slug and the Bulwark Roach (hard hits beat its
+    // per-hit damage floor); burn-resistant Cinder Golems take full physical.
+    if (
+      ground.some((e) => e.key === 'slug' || e.key === 'roach' || e.key === 'golem') &&
+      countFlora(s, l, (k) => k === 'ironbark') === 0
+    ) {
       if (tryPlace(s, 'ironbark', l, [4, 3, 5, 2])) return;
     }
-    if (ground.some((e) => e.key === 'marauder' || e.key === 'husk') && countFlora(s, l, (k) => k === 'gale') === 0) {
+    // Gale is the designed answer to every dasher (its gust cancels the sprint)
+    // as well as the root-immune Marauder: Nightcap and the retreating Iron
+    // Nightstalker both lose their whole pass to a well-placed gust.
+    if (
+      ground.some((e) => e.key === 'marauder' || e.key === 'husk' || e.key === 'nightcap' || e.key === 'nightstalker') &&
+      countFlora(s, l, (k) => k === 'gale') === 0
+    ) {
       if (tryPlace(s, 'gale', l, [3, 2, 4])) return;
     }
     if ((th.split || ground.some((e) => e.key === 'wisp' || e.key === 'chitter')) && splash === 0) {
@@ -275,14 +320,30 @@ function botAct(s: GameState, th: Threats) {
   }
 }
 
-let allWin = true;
-for (const level of LEVELS) {
+// Star thresholds come from the level definition (see types.ts / GameScreen).
+const starsFor = (level: LevelDef, snaresLeft: number) => starsForLevel(level, snaresLeft);
+
+interface RunResult {
+  status: string;
+  t: number;
+  snares: number;
+  stars: number;
+  kills: number;
+  nectar: number;
+  plants: number;
+  lost: number; // Flora destroyed / smashed / stolen off-board
+  batch: string; // which Batch 1/2 Flora actually hit the board, and how many
+  stuck: string[]; // enemies still walking when a loss/timeout settles
+}
+
+function runLevel(level: LevelDef, seed?: number): RunResult {
   const th = threatsOf(level);
   const loadout = defaultLoadoutFor(level);
-  const s = createGame(level, loadout);
+  const s = createGame(level, loadout, seed);
   let actionT = 0;
   const tracing = process.env.SIM_TRACE === String(level.id + 1);
   let nextLog = 0;
+  const events0 = s.events.length;
   while (s.status === 'playing' && s.t < 900) {
     actionT -= TICK;
     if (actionT <= 0) {
@@ -304,7 +365,7 @@ for (const level of LEVELS) {
     }
   }
   const snaresLeft = s.snares.filter(Boolean).length;
-  allWin = allWin && s.status === 'won';
+  const lost = s.events.slice(events0).filter((e) => e === 'plantdie' || e === 'smash' || e === 'stolen').length;
   const used = (k: FloraKey) => s.grid.flat().filter((f) => f?.key === k).length;
   const batch = (
     [
@@ -315,16 +376,73 @@ for (const level of LEVELS) {
     .filter((k) => used(k) > 0)
     .map((k) => `${k}x${used(k)}`)
     .join(' ');
-  console.log(
-    `L${String(level.id + 1).padStart(2)} ${level.name.padEnd(22)} ${s.status.toUpperCase().padEnd(6)} ` +
-      `t=${s.t.toFixed(0).padStart(3)}s snares=${snaresLeft}/5 kills=${String(s.kills).padStart(3)} ` +
-      `nectarLeft=${String(Math.floor(s.nectar)).padStart(4)} plants=${s.placedCount} ` +
-      `tray=[${loadout.join(',')}]${batch ? ` batch: ${batch}` : ''}`,
-  );
-  if (s.status !== 'won' && s.pending.length === 0) {
-    for (const e of s.enemies) {
-      console.log(`      stuck: ${e.key} lane=${e.lane} x=${e.x.toFixed(2)} hp=${e.hp}/${e.maxHp} stone=${e.stone} chewing=${e.chewing}`);
-    }
-  }
+  const stuck =
+    s.status !== 'won' && s.pending.length === 0
+      ? s.enemies.map(
+          (e) => `${e.key} lane=${e.lane} x=${e.x.toFixed(2)} hp=${e.hp}/${e.maxHp} stone=${e.stone} chewing=${e.chewing}`,
+        )
+      : [];
+  return {
+    status: s.status,
+    t: s.t,
+    snares: snaresLeft,
+    stars: starsFor(level, snaresLeft),
+    kills: s.kills,
+    nectar: s.nectar,
+    plants: s.placedCount,
+    lost,
+    batch,
+    stuck,
+  };
 }
-console.log(allWin ? '\nALL LEVELS WINNABLE (bot)' : '\nBALANCE FAILURES PRESENT');
+
+/** Multi-seed mode (SIM_SEEDS=n): average-skill bot across N lane-RNG seeds. */
+const SEED_N = Number(process.env.SIM_SEEDS ?? '0');
+function seedFor(level: LevelDef, k: number): number | undefined {
+  if (k === 0) return undefined; // k=0 is the canonical per-level seed
+  return ((level.id * 7919 + 1337) ^ Math.imul(k + 1, 2654435761)) >>> 0;
+}
+
+if (SEED_N > 0) {
+  // Aggregate calibration table — win rate, snare survival and star band.
+  console.log('level name                     win%  s̄nares(min)  s̄tars  s̄t   floraLost');
+  let allWinRate = true;
+  const onlyK = process.env.SIM_K ? Number(process.env.SIM_K) : -1;
+  for (const level of LEVELS) {
+    if (onlyK >= 0 && !process.env.SIM_LVL!.split(',').map(Number).includes(level.id + 1)) continue;
+    const runs: RunResult[] = [];
+    const ks = onlyK >= 0 ? [onlyK] : [...Array(SEED_N).keys()];
+    for (const k of ks) runs.push(runLevel(level, seedFor(level, k)));
+    const wins = runs.filter((r) => r.status === 'won').length;
+    const avg = (f: (r: RunResult) => number) => runs.reduce((n, r) => n + f(r), 0) / runs.length;
+    const minSnares = Math.min(...runs.map((r) => r.snares));
+    const winPct = Math.round((100 * wins) / runs.length);
+    const hist = [0, 0, 0];
+    runs.forEach((r) => hist[r.stars - 1]++);
+    const loseSeeds = runs.map((r, k) => (r.status === 'won' ? -1 : k)).filter((k) => k >= 0);
+    allWinRate = allWinRate && wins === runs.length;
+    console.log(
+      `L${String(level.id + 1).padStart(2)} ${level.name.padEnd(24)} ${String(winPct).padStart(3)}%  ` +
+        `${avg((r) => r.snares).toFixed(2)} (${minSnares})    ${avg((r) => r.stars).toFixed(2)} ` +
+        `[${hist.map((n) => String(n).padStart(2)).join('/')}]  ` +
+        `${avg((r) => r.t).toFixed(0).padStart(3)}  ${avg((r) => r.lost).toFixed(1)}` +
+        `${loseSeeds.length ? `  ⚠ lose@${loseSeeds.join(',')}` : ''}`,
+    );
+  }
+  console.log(allWinRate ? `\nALL LEVELS WINNABLE across ${SEED_N} seeds (bot)` : `\nBALANCE FAILURES PRESENT across ${SEED_N} seeds`);
+} else {
+  let allWin = true;
+  for (const level of LEVELS) {
+    const loadout = defaultLoadoutFor(level);
+    const r = runLevel(level);
+    allWin = allWin && r.status === 'won';
+    console.log(
+      `L${String(level.id + 1).padStart(2)} ${level.name.padEnd(22)} ${r.status.toUpperCase().padEnd(6)} ` +
+        `t=${r.t.toFixed(0).padStart(3)}s snares=${r.snares}/5 kills=${String(r.kills).padStart(3)} ` +
+        `nectarLeft=${String(Math.floor(r.nectar)).padStart(4)} plants=${r.plants} ` +
+        `tray=[${loadout.join(',')}]${r.batch ? ` batch: ${r.batch}` : ''}`,
+    );
+    for (const line of r.stuck) console.log(`      stuck: ${line}`);
+  }
+  console.log(allWin ? '\nALL LEVELS WINNABLE (bot)' : '\nBALANCE FAILURES PRESENT');
+}

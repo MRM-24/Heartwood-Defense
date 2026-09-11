@@ -193,6 +193,21 @@ export interface LevelDef {
   waves: WaveDef[];
   boss?: 'brute' | 'colossus' | 'hollowking';
   addPool: EnemyKey[]; // colossus adds
+  // Root Snares still in the ground at level end that earn ★★ and ★★★.
+  // Defaults to { two: 3, three: 5 } (flawless). Late-world levels tune the
+  // gate so a third star stays achievable-but-tight as the board gets busier
+  // — the threshold bends with the pressure, rather than star ratings silently
+  // drifting to all-2★ then all-1★.
+  starSnares?: { two: number; three: number };
+}
+
+/** Root-Snare thresholds for a level (2★ / 3★), with the campaign defaults. */
+export const DEFAULT_STAR_SNARES = { two: 3, three: 5 } as const;
+
+/** Star rating (1–3) from snares remaining at level end. */
+export function starsForLevel(level: LevelDef, snaresLeft: number): number {
+  const t = level.starSnares ?? DEFAULT_STAR_SNARES;
+  return snaresLeft >= t.three ? 3 : snaresLeft >= t.two ? 2 : 1;
 }
 
 // ─── Runtime entities ───────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createGame, placeFlora, shovelAt, stepGame, type PlaceResult } from '../game/engine';
 import { setSfxMuted, sfxEvent } from '../game/sfx';
-import { TICK, type FloraKey, type GameState, type LevelDef } from '../game/types';
+import { starsForLevel, TICK, type FloraKey, type GameState, type LevelDef } from '../game/types';
 import Board, { STAGE_H, STAGE_W } from './Board';
 import Hud from './Hud';
 import { LoseOverlay, PauseOverlay, WinOverlay } from './Screens';
@@ -147,7 +147,7 @@ export default function GameScreen({ level, loadout, muted, onMute, onWin, onExi
   );
 
   const snaresLeft = gs.snares.filter(Boolean).length;
-  const stars = snaresLeft >= 5 ? 3 : snaresLeft >= 3 ? 2 : 1;
+  const stars = starsForLevel(level, snaresLeft);
 
   return (
     <div ref={outerRef} className="flex h-screen w-screen items-center justify-center overflow-hidden bg-[#070c08]">
@@ -199,6 +199,7 @@ export default function GameScreen({ level, loadout, muted, onMute, onWin, onExi
           {gs.status === 'won' && (
             <WinOverlay
               stars={stars}
+              snaresLeft={snaresLeft}
               isLast={!onNext}
               onNext={() => onNext?.()}
               onReplay={() => {
