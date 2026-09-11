@@ -136,6 +136,82 @@ export const FLORA: Record<FloraKey, FloraStats> = {
     desc: 'Ripens +40 Nectar every 15s. Each harvest also rebates the next Flora you plant within 5s — 1s off its tray recharge. A snowball for aggressive openings.',
     produce: { amount: 40, interval: 15, boost: true },
   },
+
+  // ── FLORA BATCH 2: THE HOLLOW CROWN ───────────────────────────────────────
+  // Every one of these answers a specific Blightspawn from Enemy Batch 2, and
+  // every one of them does it WITHOUT a status effect — because the Crown eats
+  // statuses (Grovemaw Slug) or shrugs them off (Barkskin Marauder).
+  ironbark: {
+    key: 'ironbark',
+    name: 'Ironbark Titan',
+    cost: 250,
+    recharge: 20,
+    hp: 200,
+    role: 'Heavy Hitter',
+    desc: 'A slab of living ironwood that swings once every 3s for 80 raw damage at a single target. No splash, no chill, no poison — nothing a Grovemaw Slug can swallow and turn into armour. Expensive, slow to recharge, and the most reliable kill in the vale.',
+    attack: { dmg: 80, interval: 3 },
+  },
+  emberlash: {
+    key: 'emberlash',
+    name: 'Emberlash Vine',
+    cost: 150,
+    recharge: 10,
+    hp: 90,
+    role: 'Burn Beam',
+    desc: 'Holds a continuous 8-damage-per-second ember beam on whatever is frontmost in its lane. There is no projectile and no wind-up, so nothing is wasted when the target changes — a Molt Wisp that splits into two halves is simply burned from the first tick on the new one.',
+    attack: { dmg: 8, interval: 1, beam: true },
+  },
+  needlereed: {
+    key: 'needlereed',
+    name: 'Needle Reed',
+    cost: 125,
+    recharge: 8,
+    hp: 70,
+    role: 'Spray',
+    desc: 'Every 2s it looses a 5-needle spray at 6 damage a needle, spread across up to three enemies in its lane instead of piling all five into one. Cheap, fast to replace, and the efficient answer to Chitterling Packs and anything else that arrives clustered.',
+    attack: { dmg: 6, interval: 2, spray: 5, sprayTargets: 3 },
+  },
+  gale: {
+    key: 'gale',
+    name: 'Gale Fern',
+    cost: 150,
+    recharge: 12,
+    hp: 80,
+    role: 'Displacement',
+    desc: 'Every 6s it exhales a gust that shoves the leading enemy in its lane back two whole tiles. Physical displacement, not a status effect — a Barkskin Marauder that laughs at Bindweed still gets pushed, and a sprinting Nightcap Assassin is knocked clean out of its dash.',
+    attack: { dmg: 0, interval: 6, knockback: 2, quiet: true },
+  },
+  sentinelbloom: {
+    key: 'sentinelbloom',
+    name: 'Sentinel Bloom',
+    cost: 175,
+    recharge: 15,
+    hp: 150,
+    role: 'Riposte',
+    desc: 'It never shoots. Instead it watches: any Blightspawn that sprints or leaps across its tile — a dashing Nightcap Assassin, a leaping Mite Vaulter — takes an automatic 50-damage counter-strike, once per enemy. Turns "get behind the wall" into a cost.',
+    counterDash: 50,
+  },
+  ambush: {
+    key: 'ambush',
+    name: 'Ambush Fern',
+    cost: 125,
+    recharge: 12,
+    hp: 60,
+    role: 'Trap',
+    desc: 'Stays folded and inert until something steps into its own tile, then snaps open for a single 120-damage ambush before folding down again to recharge. Plant it early in the lane and a Fen Wretch pays for its aura the moment it arrives.',
+    ambush: 120,
+    ambushCd: 6,
+  },
+  prism: {
+    key: 'prism',
+    name: 'Prism Bud',
+    cost: 200,
+    recharge: 15,
+    hp: 100,
+    role: 'Alternating',
+    desc: 'Splits its own light: every other shot comes out as a focused physical bolt, and the one between as an 18-damage fire burst with splash. 1.8s a shot either way, so whatever damage channel The Hollow King has warded, the next Prism shot is already on the other one.',
+    attack: { dmg: 18, interval: 1.8, altKind: true },
+  },
 };
 
 export const FLORA_ORDER: FloraKey[] = [
@@ -153,6 +229,14 @@ export const FLORA_ORDER: FloraKey[] = [
   'watchvine',
   'bindweed',
   'lotus',
+  // ── FLORA BATCH 2 ──
+  'ironbark',
+  'emberlash',
+  'needlereed',
+  'gale',
+  'sentinelbloom',
+  'ambush',
+  'prism',
 ];
 
 // ─── ENEMIES ────────────────────────────────────────────────────────────────
@@ -342,6 +426,107 @@ export const ENEMIES: Record<EnemyKey, EnemyStats> = {
     desc: 'Never bites. Every 6s it snatches the most wounded Flora in its lane and hauls it for the blight — 3s to the edge. Kill it mid-heist and the plant drops back, unharmed.',
     counter: 'Burst it down before it escapes',
   },
+
+  // ── BATCH 2: THE HOLLOW CROWN ─────────────────────────────────────────────
+  // Built to push back on the Flora Batch 1 loadouts that Batch 1 taught:
+  // splash-only clears, status-only control, and "the back row is safe".
+  wisp: {
+    key: 'wisp',
+    name: 'Molt Wisp',
+    hp: 50,
+    speed: 0.24,
+    dmg: 7,
+    atkInterval: 1.0,
+    spacing: 0.45,
+    scale: 0.82,
+    splitBelow: 0.5,
+    splitInto: 'wisp',
+    splitCount: 2,
+    splitHpFrac: 0.5,
+    desc: 'The first time it drops below half HP it comes apart into two 25-HP Molt Wisps that never split again. One body becomes two smaller ones — total HP is unchanged, but the shape of the problem is not.',
+    counter: 'Sustained lane clear (Cactus volley / Watchvine), not one-shot splash',
+  },
+  slug: {
+    key: 'slug',
+    name: 'Grovemaw Slug',
+    hp: 200,
+    speed: 0.085,
+    dmg: 0,
+    atkInterval: 1.0,
+    spacing: 0.8,
+    scale: 1.25,
+    absorbStatus: 0.25,
+    drCap: 0.85,
+    desc: 'Never bites — it just comes. Any slow or poison that lands on it is swallowed instead, and its total value becomes a temporary damage-reduction shield (25% per point of control, capped at 85%). Frostcap chills are its dinner.',
+    counter: 'Raw damage only — bring Thornvines and Cinderpods, leave the control Flora home',
+  },
+  chitter: {
+    key: 'chitter',
+    name: 'Chitterling Pack',
+    hp: 20,
+    speed: 0.42,
+    dmg: 3,
+    atkInterval: 0.5,
+    spacing: 0.13,
+    scale: 0.52,
+    packSize: 4,
+    desc: 'Four bodies arrive stacked in a single lane slot and never spread out. Each one is trivially small — well under a Snaptrap\u2019s 100-HP jaw threshold — but there are four of them, six inches apart, at a dead run.',
+    counter: 'Spitting Cactus (pierce) or a Snaptrap that really has no cooldown',
+  },
+  marauder: {
+    key: 'marauder',
+    name: 'Barkskin Marauder',
+    hp: 180,
+    speed: 0.18,
+    dmg: 18,
+    atkInterval: 1.4,
+    spacing: 0.72,
+    scale: 1.3,
+    rootImmune: true,
+    desc: 'Bark over sinew. Root and immobilise effects find nothing to hold — a Bindweed Snare lashes it and simply falls away. It cannot be time-stalled; it has to be damaged down.',
+    counter: 'Raw damage and walls — Bindweed Snare is dead weight against it',
+  },
+  nightcap: {
+    key: 'nightcap',
+    name: 'Nightcap Assassin',
+    hp: 90,
+    speed: 0.3,
+    dmg: 20,
+    atkInterval: 1.0,
+    spacing: 0.55,
+    scale: 0.95,
+    dashThrough: 2,
+    desc: 'The first Flora to block it does not hold it: it breaks into a sprint, slips past your front two plants untouched, and puts a single 20-damage burst into whatever it reaches in the back row. Then it settles down and walks like anything else.',
+    counter: 'Something lethal BEHIND the wall — Watchvine, Snaptrap Root',
+  },
+  wretch: {
+    key: 'wretch',
+    name: 'Fen Wretch',
+    hp: 130,
+    speed: 0.17,
+    dmg: 12,
+    atkInterval: 1.0,
+    spacing: 0.65,
+    scale: 1.05,
+    nectarDrain: 0.5,
+    desc: 'An aura, not an attack: while it lives in a lane, every Nectar plant there ripens at half rate. It will happily sit at your wall chewing while your economy quietly halves. Kill it first.',
+    counter: 'Kill it fast — burst fire the moment it shows',
+  },
+  hollowking: {
+    key: 'hollowking',
+    name: 'The Hollow King',
+    hp: 3500,
+    speed: 0.055,
+    dmg: 40,
+    atkInterval: 1.2,
+    spacing: 1.15,
+    scale: 2.4,
+    boss: true,
+    enrageFrac: 0.25,
+    immuneCycle: { on: 5, off: 2 },
+    desc: 'Three phases. It sheds Molt Wisps as it walks; below two-thirds HP it shuts a whole damage channel off for 5s at a time, alternating between single-target strikes and area damage; below a quarter HP it enrages — attacking twice as fast and taking twice the damage.',
+    counter: 'A loadout that can switch: raw strikes AND splash, and the nerve to wait out a ward',
+  },
 };
 
 export const ENEMY_ORDER: EnemyKey[] = [
@@ -359,6 +544,14 @@ export const ENEMY_ORDER: EnemyKey[] = [
   'imp',
   'husk',
   'thief',
+  // ── Batch 2 ──
+  'wisp',
+  'chitter',
+  'nightcap',
+  'wretch',
+  'marauder',
+  'slug',
+  'hollowking',
 ];
 
 // ─── CAMPAIGN ───────────────────────────────────────────────────────────────
@@ -372,7 +565,7 @@ const G = (type: EnemyKey, count: number, gap = 1.6, startDelay = 0, catapult = 
 const W = (at: number, groups: WaveGroup[]): WaveDef => ({ at, groups });
 
 export interface WorldDef {
-  id: 1 | 2 | 3;
+  id: 1 | 2 | 3 | 4;
   name: string;
   sub: string;
   hue: string; // accent for UI
@@ -382,6 +575,7 @@ export const WORLDS: WorldDef[] = [
   { id: 1, name: 'Verdant Vale', sub: 'Where the first roots woke', hue: '#6ee7a0' },
   { id: 2, name: 'Frostmire Hollow', sub: 'The blight adapts. So must you.', hue: '#7fd4ff' },
   { id: 3, name: 'Rootbound Depths', sub: 'It has learned how you defend. Time to defend differently.', hue: '#d8a8ff' },
+  { id: 4, name: 'The Hollow Crown', sub: 'It studied the counters you were given. It has answers now.', hue: '#ffc46b' },
 ];
 
 export const LEVELS: LevelDef[] = [
@@ -581,6 +775,84 @@ export const LEVELS: LevelDef[] = [
       W(158, [G('colossus', 1), G('husk', 1, 0, 16), G('imp', 2, 3, 24, true), G('gnat', 2, 1.5, 30)]),
     ],
   },
+  // ── WORLD 4: THE HOLLOW CROWN ──
+  // Batch 2 enemies debut here. Where World 3 punished lazy habits, World 4
+  // punishes lazy COUNTERS: the loadouts Batch 1 taught you to reach for.
+  //   4-1 Molt Wisp          → splash-only clears leave two bodies standing
+  //   4-2 Grovemaw / Marauder→ status-effect Flora is eaten or shrugged off
+  //   4-3 Chitterling / Nightcap → the front line is not the only line, and the
+  //                                back row is not a free-safety zone
+  //   4-4 Fen Wretch         → your economy is a target, not a given
+  //   4-5 The Hollow King    → one loadout cannot answer all three phases
+  {
+    id: 15, world: 4, idx: 1, name: 'Ash on the Wind', hpMul: 1.9,
+    blurb: 'Something small and bright is drifting up from the crown. It does not die so much as come apart.',
+    tip: 'NEW FOE: the Molt Wisp splits into two 25-HP wisps the first time it drops below half HP. A single big splash hit just makes two problems — bring sustained lane clear (Cactus volleys, Watchvine) instead of one-shot burst.',
+    addPool: ['gnat', 'wisp', 'skitter'],
+    waves: [
+      W(12, [G('gnat', 2, 2)]),
+      W(48, [G('wisp', 3, 3.5)]),
+      W(84, [G('wisp', 4, 2.8), G('gnat', 3, 1.4, 8)]),
+      W(122, [G('wisp', 4, 2.6), G('beetle', 1, 0, 6), G('skitter', 3, 0.7, 12)]),
+      W(160, [G('wisp', 5, 2.2), G('gnat', 3, 1.4, 8), G('beetle', 1, 0, 14)]),
+      W(196, [G('wisp', 5, 2), G('skitter', 3, 0.7, 6), G('gnat', 3, 1.4, 12)]),
+    ],
+  },
+  {
+    id: 16, world: 4, idx: 2, name: 'The Slow Green Hunger', hpMul: 2.0,
+    blurb: 'A slug the size of a barrow, and something with bark where a hide should be.',
+    tip: 'NEW FOES: the Grovemaw Slug EATS your slows and turns them into damage reduction — leave Frostcap at home and bring raw damage. The Barkskin Marauder shrugs off Bindweed Snare entirely and cannot be time-stalled.',
+    addPool: ['gnat', 'slug', 'marauder'],
+    waves: [
+      W(12, [G('gnat', 2, 2)]),
+      W(48, [G('slug', 1), G('gnat', 2, 1.6, 6)]),
+      W(84, [G('marauder', 2, 6), G('wisp', 3, 3.5, 8)]),
+      W(122, [G('slug', 2, 9), G('marauder', 2, 6, 6), G('skitter', 3, 0.7, 14)]),
+      W(160, [G('slug', 2, 8), G('marauder', 3, 5, 6), G('wisp', 3, 3, 12)]),
+      W(196, [G('slug', 3, 7), G('marauder', 3, 5, 8), G('gnat', 3, 1.4, 4)]),
+    ],
+  },
+  {
+    id: 17, world: 4, idx: 3, name: 'A Thousand Small Teeth', hpMul: 2.05,
+    blurb: 'The undergrowth chitters. Then the chittering is behind you.',
+    tip: 'NEW FOES: Chitterling Packs arrive as FOUR bodies in one lane slot, each far too small to matter and far too fast to ignore. Nightcap Assassins sprint past your front two plants and burst something in the BACK row — keep a Watchvine or Snaptrap behind the wall.',
+    addPool: ['chitter', 'nightcap', 'gnat'],
+    waves: [
+      W(12, [G('gnat', 2, 2)]),
+      W(48, [G('chitter', 1), G('gnat', 2, 1.6, 6)]),
+      W(84, [G('nightcap', 2, 5), G('chitter', 2, 6, 8)]),
+      W(120, [G('chitter', 3, 5), G('nightcap', 3, 4, 6), G('skitter', 3, 0.7, 12)]),
+      W(158, [G('nightcap', 4, 3.5), G('chitter', 3, 4.5, 6), G('gnat', 3, 1.4, 12)]),
+      W(194, [G('nightcap', 5, 3), G('chitter', 4, 4, 6), G('beetle', 1, 0, 10)]),
+    ],
+  },
+  {
+    id: 18, world: 4, idx: 4, name: 'The Fen Remembers', hpMul: 2.1,
+    blurb: 'The water here is warm and wrong. Your Glowbulbs are ripening slower every minute.',
+    tip: 'NEW FOE: the Fen Wretch halves the Nectar output of every Nectar plant in its lane for as long as it lives — an aura, not a hit. Kill it the instant it shows or your economy stalls out from under you. Everything from the crown comes with it.',
+    addPool: ['wretch', 'slug', 'chitter', 'gnat'],
+    waves: [
+      W(12, [G('gnat', 3, 1.6)]),
+      W(48, [G('wretch', 2, 6), G('gnat', 2, 1.6, 6)]),
+      W(84, [G('wretch', 3, 5), G('chitter', 1, 0, 8), G('larva', 1, 0, 14)]),
+      W(120, [G('wretch', 3, 5), G('slug', 1, 0, 8), G('marauder', 2, 6, 14)]),
+      W(158, [G('wretch', 4, 5), G('husk', 1, 0, 10), G('chitter', 2, 6, 4)]),
+      W(196, [G('wretch', 4, 4.5), G('slug', 2, 8, 6), G('nightcap', 3, 4, 12), G('gnat', 3, 1.4, 2)]),
+    ],
+  },
+  {
+    id: 19, world: 4, idx: 5, name: 'The Hollow Crown', hpMul: 1.95, boss: 'hollowking',
+    blurb: 'It wears the vale\u2019s own tricks now, and it has learned which of your answers are habits.',
+    tip: 'BOSS: three phases. It sheds Molt Wisps as it walks; below 2/3 HP it shuts a whole damage channel off for 5s at a time, alternating between single-target strikes and splash — watch the ward and switch plants; below 1/4 HP it enrages, hitting twice as fast but taking DOUBLE damage. Hold your burst for the enrage.',
+    addPool: ['wisp', 'chitter', 'marauder', 'gnat'],
+    waves: [
+      W(12, [G('gnat', 2, 2), G('wisp', 3, 3.5, 8)]),
+      W(50, [G('marauder', 2, 6), G('slug', 1, 0, 7)]),
+      W(90, [G('nightcap', 3, 5), G('chitter', 2, 6, 6), G('wretch', 2, 6, 12)]),
+      W(130, [G('wisp', 4, 3), G('marauder', 2, 6, 8), G('chitter', 2, 6, 14)]),
+      W(168, [G('hollowking', 1), G('marauder', 2, 7, 14), G('nightcap', 3, 4, 20), G('chitter', 2, 6, 28), G('gnat', 3, 1.4, 36)]),
+    ],
+  },
 ];
 
 // Flora unlocks: level id at which the flora becomes available. Flora Batch 1
@@ -601,6 +873,12 @@ export const FLORA_UNLOCKS: { level: number; flora: FloraKey[] }[] = [
   { level: 12, flora: ['bulwark', 'watchvine'] }, // vs Locust Ranger / Spore Imp
   { level: 13, flora: ['snaptrap', 'bindweed'] }, // vs Root Thief & swarms / Gargant Husk
   { level: 14, flora: [] },
+  // Flora Batch 2 arrives with World 4, one answer per level of the Crown.
+  { level: 15, flora: ['emberlash', 'needlereed'] }, // vs Molt Wisp splits / clustered weak units
+  { level: 16, flora: ['ironbark', 'gale'] }, // vs Grovemaw Slug / Barkskin Marauder
+  { level: 17, flora: ['sentinelbloom'] }, // vs Nightcap Assassin
+  { level: 18, flora: ['ambush'] }, // vs Fen Wretch
+  { level: 19, flora: ['prism'] }, // vs The Hollow King's rotating ward
 ];
 
 export function unlockedFloraFor(levelId: number): FloraKey[] {
@@ -646,7 +924,25 @@ export function defaultLoadoutFor(level: LevelDef): FloraKey[] {
   if (threats.has('imp') || threats.has('thief')) { add('watchvine'); add('snaptrap'); }
   if (threats.has('husk')) add('bindweed');
   if (threats.has('warden') || threats.has('beetle') || threats.has('skitter')) add('cactus');
-  add('frostcap');
+  // ── Flora Batch 2: the Hollow Crown answers, strongest first ──
+  // The King wards one damage channel at a time; Prism Bud is never on the wrong one.
+  if (threats.has('hollowking')) add('prism');
+  // A Grovemaw Slug eats statuses — raw burst has nothing for it to absorb.
+  if (threats.has('slug')) add('ironbark');
+  // Displacement works on things that shrug off root — and cancels a Nightcap sprint.
+  if (threats.has('marauder') || threats.has('husk')) add('gale');
+  // Splits and packs are a sustained-clear problem, not a burst problem.
+  if (threats.has('wisp') || threats.has('chitter')) add('emberlash');
+  if (threats.has('nightcap') || threats.has('vaulter')) add('sentinelbloom');
+  if (threats.has('wretch')) add('ambush');
+  if (threats.has('chitter')) add('needlereed');
+  // Older toolkit, still useful as filler.
+  if (threats.has('wisp') || threats.has('chitter')) add('cactus');
+  if (threats.has('slug') || threats.has('marauder')) { add('thornvine'); add('cinderpod'); }
+  if (threats.has('nightcap') || threats.has('wretch')) { add('watchvine'); add('snaptrap'); }
+  if (threats.has('hollowking')) { add('cactus'); add('cinderpod'); add('watchvine'); add('bramble'); }
+  // A Grovemaw Slug turns chill straight into armour — don't hand it dinner.
+  if (!threats.has('slug')) add('frostcap');
   for (const k of unlocked) add(k);
   return out.slice(0, LOADOUT_SLOTS);
 }

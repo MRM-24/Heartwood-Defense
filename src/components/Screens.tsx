@@ -109,7 +109,7 @@ export function TitleScreen({ onPlay, onHow, hasSave }: { onPlay: () => void; on
         </div>
         <div className="mt-10 flex items-center gap-2 font-ui text-[12px] font-semibold tracking-wider text-[#62788] text-opacity-70">
           <Shield className="h-4 w-4 text-[#57c178]" />
-          <span className="text-[#6b8571]">15 levels · 3 worlds · 13 Flora · 14 Blightspawn · 2 bosses</span>
+          <span className="text-[#6b8571]">20 levels · 4 worlds · 20 Flora · 21 Blightspawn · 3 bosses</span>
         </div>
       </div>
     </Backdrop>
@@ -164,6 +164,24 @@ export function GuideModal({ onClose }: { onClose: () => void }) {
             smash wind-ups included. The <b className="text-[#ffd7ef]">Nectar Lotus</b> ripens +40 and rebates the next planting. Pick six; the Depths
             will tell you which six.
           </Rule>
+          <Rule n="8" title="The Crown punishes your counters">
+            Under the Hollow Crown the blight has studied the answers you were handed. The <b className="text-[#a8ffd0]">Grovemaw Slug</b> eats your
+            slows and poisons and turns them into damage reduction — leave the control Flora at home. The <b className="text-[#d9b98a]">Barkskin Marauder</b> shrugs
+            off Bindweed entirely and cannot be stalled, only killed. <b className="text-[#ffb1d6]">Chitterling Packs</b> arrive four to a lane slot, each far too
+            small to matter alone. The <b className="text-[#c9b8ee]">Nightcap Assassin</b> sprints clean past your front two plants and bursts something in the
+            back row, and the <b className="text-[#c8e88a]">Fen Wretch</b> halves every Nectar plant in its lane just by standing there. <b className="text-[#ffd76a]">Molt Wisps</b> split
+            in two below half HP — one big hit buys the blight two bodies. And <b className="text-[#d8a8ff]">the Hollow King</b> switches a whole damage
+            channel off for five seconds at a time, so a tray that only does one kind of damage will stall.
+          </Rule>
+          <Rule n="9" title="Fight back without a status effect">
+            The Crown eats slows and shrugs off roots, so the second Flora wave does its work with physics instead.
+            The <b className="text-[#cdd6de]">Ironbark Titan</b> lands 80 raw damage a swing — nothing to absorb. The <b className="text-[#ff9a3d]">Emberlash Vine</b> holds a
+            continuous burn beam, so a <b>Molt Wisp</b> splitting costs it no wasted shot. The <b className="text-[#e8f0c8]">Needle Reed</b> spreads five needles across
+            three bodies instead of overkilling one. The <b className="text-[#a8e0f0]">Gale Fern</b> shoves the leader back two tiles — displacement, which root
+            immunity does not answer. The <b className="text-[#c9b8ee]">Sentinel Bloom</b> counter-strikes anything that sprints or leaps past it. The <b className="text-[#8fd06a]">Ambush Fern</b> folds
+            until something enters its tile, then hits for 120. And the <b className="text-[#7fd4ff]">Prism Bud</b> alternates damage channel every other shot, so the
+            Hollow King's ward is never a full answer.
+          </Rule>
         </div>
         <h3 className="mb-3 mt-7 font-display text-xl font-bold text-[#ffd76a]">The Flora</h3>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
@@ -204,13 +222,13 @@ export function WorldSelect({
 }: {
   maxLevel: number;
   stars: Record<number, number>;
-  onPick: (world: 1 | 2 | 3) => void;
+  onPick: (world: 1 | 2 | 3 | 4) => void;
   onBack: () => void;
 }) {
   return (
     <Backdrop>
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 py-10">
-        <Header kicker="CHOOSE YOUR GROUND" title="Two Worlds of the Vale" />
+        <Header kicker="CHOOSE YOUR GROUND" title="Four Worlds of the Vale" />
         <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-2">
           {WORLDS.map((w) => {
             const levels = LEVELS.filter((l) => l.world === w.id);
@@ -267,7 +285,7 @@ export function LevelSelect({
   onPick,
   onBack,
 }: {
-  world: 1 | 2 | 3;
+  world: 1 | 2 | 3 | 4;
   maxLevel: number;
   stars: Record<number, number>;
   onPick: (level: LevelDef) => void;

@@ -193,6 +193,21 @@ export default function Hud({ s, speed, muted, onSelect, onShovel, onSpeed, onPa
               style={{ width: `${(boss.hp / boss.maxHp) * 100}%`, background: 'linear-gradient(90deg,#ff5d7c,#ff9a3d)' }}
             />
           </div>
+          {/* The Hollow King's ward. The whole fight turns on reading this line:
+              while a channel is denied, plants of that kind do literally nothing. */}
+          {boss.immuneTo !== null && (
+            <div className="anim-pop mt-1 flex items-center justify-center gap-2 rounded-md border border-[#7fd4ff]/60 bg-[#08181f]/90 px-3 py-0.5">
+              <span className="font-ui text-[12px] font-black tracking-[0.16em] text-[#7fd4ff]">
+                {boss.immuneTo === 'physical' ? 'STRIKES' : boss.immuneTo === 'splash' ? 'SPLASH' : 'POISON'} WARDED — SWITCH PLANTS
+              </span>
+              <span className="font-ui text-[12px] font-bold text-[#9fc4d8]">{boss.immuneT.toFixed(1)}s</span>
+            </div>
+          )}
+          {boss.enraged && (
+            <div className="anim-pop mt-1 rounded-md border border-[#ff3d3d]/70 bg-[#20080c]/90 px-3 py-0.5 text-center font-ui text-[12px] font-black tracking-[0.16em] text-[#ff7d95]">
+              ENRAGED — TWICE THE SWINGS, TWICE THE DAMAGE TAKEN
+            </div>
+          )}
         </div>
       )}
     </div>

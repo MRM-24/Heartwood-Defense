@@ -482,7 +482,248 @@ function NectarLotus({ hpFrac }: { hpFrac: number }) {
   );
 }
 
-export function FloraSprite({ k, hpFrac = 1 }: { k: FloraKey; hpFrac?: number }) {
+// ─────────────────────────── FLORA BATCH 2 ─────────────────────────────────
+function IronbarkTitan() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <defs>
+        <linearGradient id="ib-wood" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#6b563a" />
+          <stop offset="0.45" stopColor="#4a3a26" />
+          <stop offset="1" stopColor="#2e2418" />
+        </linearGradient>
+        <linearGradient id="ib-iron" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#b9c2cc" />
+          <stop offset="1" stopColor="#5d6a78" />
+        </linearGradient>
+      </defs>
+      <g className="anim-settle">
+        {/* roots */}
+        <path d="M28 92 C 22 84 20 78 22 72 M 72 92 C 78 84 80 78 78 72" stroke={O} strokeWidth="6" fill="none" strokeLinecap="round" />
+        {/* trunk */}
+        <path d="M26 92 C 22 66 24 34 38 22 C 52 12 70 18 74 34 C 78 52 76 76 72 92 Z" fill="url(#ib-wood)" stroke={O} strokeWidth="3.6" strokeLinejoin="round" />
+        <path d="M34 84 C 32 62 33 40 40 28 M 52 88 C 51 64 52 42 56 30 M 66 84 C 66 64 66 46 64 34" stroke="#241b10" strokeWidth="2.6" fill="none" strokeLinecap="round" opacity="0.8" />
+        {/* iron banding — the reason nothing sticks to it */}
+        <path d="M25 66 C 42 60 62 60 75 66 L 75 76 C 62 70 42 70 25 76 Z" fill="url(#ib-iron)" stroke={O} strokeWidth="2.6" strokeLinejoin="round" />
+        <circle cx="36" cy="69" r="2.4" fill="#2c333c" />
+        <circle cx="52" cy="67" r="2.4" fill="#2c333c" />
+        <circle cx="66" cy="69" r="2.4" fill="#2c333c" />
+        {/* the fist */}
+        <g className="anim-nod">
+          <path d="M62 44 C 78 40 92 46 94 56 C 95 66 84 72 72 68 C 64 65 60 54 62 44 Z" fill="#5d6a78" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+          <path d="M70 48 l 16 4 M 68 56 l 18 3 M 70 63 l 14 2" stroke="#2c333c" strokeWidth="2.4" strokeLinecap="round" />
+        </g>
+        {/* eye slit */}
+        <path d="M36 40 C 42 36 52 36 58 40 C 52 45 42 45 36 40 Z" fill="#120c06" stroke={O} strokeWidth="2" />
+        <circle cx="47" cy="40" r="3.4" fill="#ffcf6b" className="anim-breathe" />
+      </g>
+    </svg>
+  );
+}
+
+function EmberlashVine({ beamOn }: { beamOn: boolean }) {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <defs>
+        <radialGradient id="el-ember" cx="0.5" cy="0.5" r="0.6">
+          <stop offset="0" stopColor="#fff3c4" />
+          <stop offset="0.5" stopColor="#ff9a3d" />
+          <stop offset="1" stopColor="#c9410f" />
+        </radialGradient>
+      </defs>
+      <g className="anim-sway">
+        {/* coiled base */}
+        <path d="M32 92 C 24 84 26 74 36 72 C 46 70 52 78 48 86" fill="none" stroke={O} strokeWidth="7" strokeLinecap="round" />
+        <path d="M32 92 C 24 84 26 74 36 72 C 46 70 52 78 48 86" fill="none" stroke="#7a4a22" strokeWidth="4" strokeLinecap="round" />
+        {/* the lash */}
+        <path d="M42 80 C 40 60 46 44 60 34 C 72 26 84 28 88 36" fill="none" stroke={O} strokeWidth="7" strokeLinecap="round" />
+        <path d="M42 80 C 40 60 46 44 60 34 C 72 26 84 28 88 36" fill="none" stroke="#b4551f" strokeWidth="4" strokeLinecap="round" />
+        {/* leaves */}
+        <path d="M44 62 C 32 58 26 48 30 40 C 40 42 46 52 44 62 Z" fill="#8f5a26" stroke={O} strokeWidth="2.4" strokeLinejoin="round" />
+        <path d="M58 44 C 52 34 54 24 62 20 C 68 28 66 38 58 44 Z" fill="#a8631f" stroke={O} strokeWidth="2.4" strokeLinejoin="round" />
+        {/* the ember maw */}
+        <g className={beamOn ? 'anim-breathe' : 'anim-breathe-slow'}>
+          <circle cx="90" cy="38" r={beamOn ? 12 : 9} fill="url(#el-ember)" stroke={O} strokeWidth="2.6" />
+          <circle cx="90" cy="38" r={beamOn ? 5 : 3.6} fill="#fff8e0" />
+          {beamOn && (
+            <g className="anim-twinkle">
+              <path d="M90 20 l 0 -8 M 102 30 l 7 -5 M 104 44 l 8 2 M 96 52 l 4 7" stroke="#ffcf6b" strokeWidth="2.6" strokeLinecap="round" />
+            </g>
+          )}
+        </g>
+      </g>
+    </svg>
+  );
+}
+
+function NeedleReed() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <g className="anim-sway-slow">
+        {/* the reeds */}
+        {[
+          { x: 30, y: 92, t: 26, w: 3 },
+          { x: 44, y: 94, t: 16, w: 3.4 },
+          { x: 58, y: 92, t: 22, w: 3 },
+          { x: 72, y: 94, t: 32, w: 2.6 },
+        ].map((r, i) => (
+          <g key={i}>
+            <path d={`M${r.x} ${r.y} C ${r.x - 3} ${r.y - 24} ${r.x + 2} ${r.y - 44} ${r.x + 4} ${r.t + 34}`} fill="none" stroke={O} strokeWidth={r.w + 2.4} strokeLinecap="round" />
+            <path d={`M${r.x} ${r.y} C ${r.x - 3} ${r.y - 24} ${r.x + 2} ${r.y - 44} ${r.x + 4} ${r.t + 34}`} fill="none" stroke="#9fbf5a" strokeWidth={r.w} strokeLinecap="round" />
+          </g>
+        ))}
+        {/* needle tips */}
+        <path d="M34 60 l 6 -14 l 5 13 Z M48 50 l 5 -16 l 5 15 Z M62 56 l 6 -15 l 4 14 Z M76 66 l 5 -13 l 4 12 Z" fill="#e8f0c8" stroke={O} strokeWidth="2" strokeLinejoin="round" />
+        {/* sheath */}
+        <path d="M26 94 C 36 84 64 84 76 94 Z" fill="#6f8f3a" stroke={O} strokeWidth="2.6" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
+
+function GaleFern() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <g className="anim-sway">
+        {/* fronds curling into a wind spiral */}
+        <path d="M50 94 C 48 74 48 58 50 44" fill="none" stroke={O} strokeWidth="7" strokeLinecap="round" />
+        <path d="M50 94 C 48 74 48 58 50 44" fill="none" stroke="#5f9a6a" strokeWidth="4" strokeLinecap="round" />
+        <path d="M50 62 C 34 60 22 50 20 38 C 34 38 46 48 50 62 Z" fill="#7fc08a" stroke={O} strokeWidth="2.6" strokeLinejoin="round" />
+        <path d="M50 54 C 66 52 78 42 80 30 C 66 30 54 40 50 54 Z" fill="#7fc08a" stroke={O} strokeWidth="2.6" strokeLinejoin="round" />
+        <path d="M50 74 C 36 74 26 68 22 60 C 34 58 44 64 50 74 Z" fill="#6aab78" stroke={O} strokeWidth="2.4" strokeLinejoin="round" />
+        {/* the gust */}
+        <g className="anim-spin-slow" style={{ transformOrigin: '50px 30px' }}>
+          <path d="M22 30 C 30 18 52 14 66 22 C 76 28 74 40 62 40 C 54 40 52 32 58 30" fill="none" stroke="#dff5ff" strokeWidth="3.4" strokeLinecap="round" opacity="0.95" />
+          <path d="M30 40 C 40 32 58 30 70 36" fill="none" stroke="#a8e0f0" strokeWidth="2.6" strokeLinecap="round" opacity="0.8" />
+        </g>
+        <g className="anim-twinkle">
+          <circle cx="84" cy="26" r="2.6" fill="#dff5ff" />
+          <circle cx="14" cy="44" r="2.2" fill="#dff5ff" />
+          <circle cx="88" cy="44" r="1.8" fill="#a8e0f0" />
+        </g>
+      </g>
+    </svg>
+  );
+}
+
+function SentinelBloom({ flash }: { flash: number }) {
+  const lit = flash > 0;
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <defs>
+        <radialGradient id="sb-petal" cx="0.5" cy="0.4" r="0.7">
+          <stop offset="0" stopColor={lit ? '#fff3c4' : '#e8d9ff'} />
+          <stop offset="1" stopColor={lit ? '#ff9a3d' : '#7a5cc4'} />
+        </radialGradient>
+      </defs>
+      <g className="anim-sway-slow">
+        <path d="M50 94 C 48 78 48 66 50 56" fill="none" stroke={O} strokeWidth="7" strokeLinecap="round" />
+        <path d="M50 94 C 48 78 48 66 50 56" fill="none" stroke="#4f8f5a" strokeWidth="4" strokeLinecap="round" />
+        <path d="M50 80 C 38 78 30 70 30 62 C 40 62 48 70 50 80 Z" fill="#6aab78" stroke={O} strokeWidth="2.4" strokeLinejoin="round" />
+        {/* petals */}
+        {[0, 60, 120, 180, 240, 300].map((a) => (
+          <ellipse
+            key={a}
+            cx="50"
+            cy="26"
+            rx="10"
+            ry="18"
+            fill="url(#sb-petal)"
+            stroke={O}
+            strokeWidth="2.4"
+            transform={`rotate(${a} 50 40)`}
+          />
+        ))}
+        {/* the watching eye */}
+        <circle cx="50" cy="40" r="12" fill="#150f28" stroke={O} strokeWidth="2.6" />
+        <circle cx="50" cy="40" r={lit ? 8 : 6} fill={lit ? '#ff5d7c' : '#ffd76a'} className="anim-breathe" />
+        <circle cx="50" cy="40" r="2.6" fill="#150f28" />
+        {/* barbs — what actually does the counter-striking */}
+        <path d="M28 40 l -12 -6 M 72 40 l 12 -6 M 32 58 l -11 6 M 68 58 l 11 6" stroke={O} strokeWidth="3" strokeLinecap="round" />
+        <path d="M16 34 l -5 -2 M 84 34 l 5 -2" stroke={lit ? '#ff9a3d' : '#c9b8ee'} strokeWidth="2.6" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function AmbushFern({ armed }: { armed: boolean }) {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <g className={armed ? 'anim-breathe-slow' : 'anim-settle'}>
+        {/* soil mound */}
+        <path d="M20 92 C 30 82 70 82 80 92 Z" fill="#5a4630" stroke={O} strokeWidth="2.6" strokeLinejoin="round" />
+        {armed ? (
+          <g>
+            {/* folded shut — a fist waiting */}
+            <path d="M34 84 C 28 66 34 48 50 44 C 66 48 72 66 66 84 Z" fill="#4f8f4a" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+            <path d="M50 46 L 50 82" stroke="#2c5a2c" strokeWidth="2.6" strokeLinecap="round" />
+            <path d="M38 58 C 44 54 56 54 62 58 M 36 70 C 44 66 56 66 64 70" stroke="#2c5a2c" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+            {/* the tell: a single pale trigger hair */}
+            <path d="M50 44 C 48 34 50 26 54 20" fill="none" stroke={O} strokeWidth="2.6" strokeLinecap="round" />
+            <circle cx="54" cy="19" r="3.4" fill="#ffd76a" className="anim-twinkle" />
+          </g>
+        ) : (
+          <g>
+            {/* sprung open and spent */}
+            <path d="M30 84 C 18 70 14 54 20 44 C 30 50 34 66 34 82 Z" fill="#3f7a3c" stroke={O} strokeWidth="2.8" strokeLinejoin="round" />
+            <path d="M70 84 C 82 70 86 54 80 44 C 70 50 66 66 66 82 Z" fill="#3f7a3c" stroke={O} strokeWidth="2.8" strokeLinejoin="round" />
+            <path d="M40 84 C 38 74 40 66 46 62 M 60 84 C 62 74 60 66 54 62" fill="none" stroke="#2c5a2c" strokeWidth="2.4" strokeLinecap="round" />
+            <circle cx="50" cy="70" r="4" fill="#2c5a2c" opacity="0.7" />
+          </g>
+        )}
+      </g>
+    </svg>
+  );
+}
+
+function PrismBud({ fire }: { fire: boolean }) {
+  const a = fire ? '#ff9a3d' : '#7fd4ff';
+  const b = fire ? '#ffd76a' : '#c9b8ee';
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+      <defs>
+        <linearGradient id="pb-crystal" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor={b} />
+          <stop offset="0.5" stopColor="#f4fbff" />
+          <stop offset="1" stopColor={a} />
+        </linearGradient>
+      </defs>
+      <g className="anim-sway-slow">
+        <path d="M50 94 C 48 78 48 66 50 54" fill="none" stroke={O} strokeWidth="7" strokeLinecap="round" />
+        <path d="M50 94 C 48 78 48 66 50 54" fill="none" stroke="#4f8f7a" strokeWidth="4" strokeLinecap="round" />
+        <path d="M50 78 C 38 76 30 68 30 60 C 40 60 48 68 50 78 Z" fill="#6aab98" stroke={O} strokeWidth="2.4" strokeLinejoin="round" />
+        <path d="M50 72 C 62 70 70 62 70 54 C 60 54 52 62 50 72 Z" fill="#6aab98" stroke={O} strokeWidth="2.4" strokeLinejoin="round" />
+        {/* the bud: a cut crystal splitting its own light */}
+        <g className="anim-breathe">
+          <path d="M50 12 L 70 34 L 62 58 L 38 58 L 30 34 Z" fill="url(#pb-crystal)" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+          <path d="M50 12 L 50 58 M 30 34 L 70 34 M 38 58 L 62 34 M 62 58 L 38 34" stroke={O} strokeWidth="1.8" opacity="0.55" />
+          <circle cx="50" cy="36" r="6" fill="#fff" opacity="0.85" />
+        </g>
+        {/* the two beams it alternates between */}
+        <g className="anim-twinkle">
+          <path d="M70 34 L 90 24" stroke="#7fd4ff" strokeWidth={fire ? 2.2 : 4} strokeLinecap="round" opacity={fire ? 0.45 : 0.95} />
+          <path d="M70 34 L 90 46" stroke="#ff9a3d" strokeWidth={fire ? 4 : 2.2} strokeLinecap="round" opacity={fire ? 0.95 : 0.45} />
+        </g>
+      </g>
+    </svg>
+  );
+}
+
+export function FloraSprite({
+  k,
+  hpFrac = 1,
+  beamOn = false,
+  armed = true,
+  fire = false,
+  riposteFlash = 0,
+}: {
+  k: FloraKey;
+  hpFrac?: number;
+  beamOn?: boolean; // Emberlash Vine: currently holding its beam on something
+  armed?: boolean; // Ambush Fern: folded and waiting vs. sprung and recharging
+  fire?: boolean; // Prism Bud: the next shot is the fire half of the alternation
+  riposteFlash?: number; // Sentinel Bloom: just counter-struck something
+}) {
   switch (k) {
     case 'thornvine': return <Thornvine />;
     case 'glowbulb': return <Glowbulb />;
@@ -497,6 +738,13 @@ export function FloraSprite({ k, hpFrac = 1 }: { k: FloraKey; hpFrac?: number })
     case 'watchvine': return <Watchvine />;
     case 'bindweed': return <BindweedSnare />;
     case 'lotus': return <NectarLotus hpFrac={hpFrac} />;
+    case 'ironbark': return <IronbarkTitan />;
+    case 'emberlash': return <EmberlashVine beamOn={beamOn} />;
+    case 'needlereed': return <NeedleReed />;
+    case 'gale': return <GaleFern />;
+    case 'sentinelbloom': return <SentinelBloom flash={riposteFlash} />;
+    case 'ambush': return <AmbushFern armed={armed} />;
+    case 'prism': return <PrismBud fire={fire} />;
   }
 }
 
@@ -988,6 +1236,246 @@ function RootThief({ carrying }: { carrying: boolean }) {
   );
 }
 
+// ─────────────────────────── ENEMY BATCH 2 ─────────────────────────────────
+function MoltWisp({ spent }: { spent: boolean }) {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible -scale-x-100">
+      <defs>
+        <radialGradient id="mw-core" cx="0.4" cy="0.35" r="0.7">
+          <stop offset="0" stopColor="#fff6d8" />
+          <stop offset="0.5" stopColor="#ffd98a" />
+          <stop offset="1" stopColor="#e0913f" />
+        </radialGradient>
+      </defs>
+      <g className="anim-bob">
+        {/* the husk it has not finished shedding — gone once it has split */}
+        {!spent && (
+          <path
+            d="M62 30 C 84 32 92 50 86 66 C 80 80 62 84 54 76 C 68 72 78 60 76 46 C 74 36 68 32 62 30 Z"
+            fill="#e8d9a0"
+            opacity="0.75"
+            stroke={O}
+            strokeWidth="2.4"
+            strokeLinejoin="round"
+          />
+        )}
+        <ellipse cx="34" cy="28" rx="16" ry="8" fill="#ffeec2" opacity="0.55" stroke={O} strokeWidth="1.8" className="anim-flutter" />
+        <ellipse cx="36" cy="40" rx="12" ry="6" fill="#ffeec2" opacity="0.45" stroke={O} strokeWidth="1.6" className="anim-flutter2" />
+        <path d="M30 66 C 20 60 16 46 24 36 C 33 25 52 24 60 34 C 68 44 66 60 55 66 C 47 70 37 70 30 66 Z" fill="url(#mw-core)" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+        {/* the molt seam — where it will come apart */}
+        {!spent && <path d="M42 26 C 40 40 40 54 44 68" stroke="#b4762c" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeDasharray="5 4" opacity="0.85" />}
+        <circle cx="34" cy="46" r="8.5" fill="#fffdf2" stroke={O} strokeWidth="2.4" />
+        <circle cx="32.4" cy="47" r="4.2" fill="#3a2106" />
+        <circle cx="33.8" cy="45.4" r="1.5" fill="#ffd98a" />
+        <g className="anim-twinkle">
+          <circle cx="72" cy="52" r="2.6" fill="#ffd76a" />
+          <circle cx="80" cy="44" r="1.8" fill="#ffb15e" />
+        </g>
+        <path d="M34 66 l -3 8 M 44 68 l 0 8 M 54 64 l 3 8" stroke={O} strokeWidth="2.2" strokeLinecap="round" className="anim-legs" />
+      </g>
+    </svg>
+  );
+}
+
+function GrovemawSlug({ shieldFrac }: { shieldFrac: number }) {
+  const fed = shieldFrac > 0.01;
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible -scale-x-100">
+      <defs>
+        <linearGradient id="gs-body" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#9fd08a" />
+          <stop offset="0.6" stopColor="#5f9a58" />
+          <stop offset="1" stopColor="#3c6b3c" />
+        </linearGradient>
+      </defs>
+      <g className="anim-lurch-slow">
+        <path d="M10 86 C 34 80 70 80 94 86 C 70 92 34 92 10 86 Z" fill="#7fc98f" opacity="0.35" />
+        <path d="M12 84 C 12 74 30 70 52 70 C 74 70 92 74 92 84 C 74 88 30 88 12 84 Z" fill="#4a7f4a" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+        <path d="M16 80 C 8 62 18 40 42 36 C 66 32 88 44 90 62 C 91 74 80 80 64 80 Z" fill="url(#gs-body)" stroke={O} strokeWidth="3.2" strokeLinejoin="round" />
+        {/* the maw on its back — the organ that drinks your control effects */}
+        <path d="M46 34 C 40 20 52 8 66 10 C 78 12 84 24 78 34 C 68 30 56 30 46 34 Z" fill="#2c4a2c" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+        <path d="M50 30 C 52 20 60 14 68 16 M 56 31 C 58 22 64 18 70 20" stroke={fed ? '#a8ffd0' : '#63d99a'} strokeWidth="2.6" fill="none" strokeLinecap="round" opacity="0.9" />
+        <path d="M50 26 l 4 6 l -7 1 Z M 62 22 l 3 7 l -7 0 Z M 74 28 l 5 5 l -8 1 Z" fill="#e6ffe9" stroke={O} strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M26 46 C 20 38 18 30 20 24" fill="none" stroke={O} strokeWidth="3" strokeLinecap="round" />
+        <path d="M36 44 C 33 36 33 28 36 22" fill="none" stroke={O} strokeWidth="3" strokeLinecap="round" />
+        <circle cx="20" cy="22" r="4.6" fill="#eaffe0" stroke={O} strokeWidth="2" />
+        <circle cx="19" cy="22.4" r="2.2" fill="#26401f" />
+        <circle cx="36" cy="20" r="4.6" fill="#eaffe0" stroke={O} strokeWidth="2" />
+        <circle cx="35" cy="20.4" r="2.2" fill="#26401f" />
+        {/* the absorbed film — thickens with everything it has eaten */}
+        {fed && (
+          <g>
+            <path
+              d="M14 78 C 6 58 18 34 44 30 C 70 26 94 40 94 62 C 94 76 80 82 62 82"
+              fill="none"
+              stroke="#a8ffd0"
+              strokeWidth={2 + shieldFrac * 5}
+              strokeLinecap="round"
+              opacity={0.45 + shieldFrac * 0.4}
+            />
+            <circle cx="62" cy="16" r={3 + shieldFrac * 3} fill="#a8ffd0" opacity="0.7" className="anim-breathe" />
+          </g>
+        )}
+      </g>
+    </svg>
+  );
+}
+
+function Chitterling() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible -scale-x-100">
+      <g className="anim-skitter">
+        <path d="M28 62 l -10 14 M 42 66 l -6 14 M 58 66 l 6 14 M 72 60 l 12 12" stroke={O} strokeWidth="4" strokeLinecap="round" className="anim-legs" />
+        <ellipse cx="52" cy="52" rx="26" ry="20" fill="#e0709a" stroke={O} strokeWidth="4" />
+        <path d="M40 40 C 38 48 38 58 42 66 M 58 38 C 56 48 56 58 60 66" stroke="#a3406a" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.8" />
+        <path d="M26 48 C 14 46 8 52 10 60 C 12 68 24 70 30 64 Z" fill="#f0a0c0" stroke={O} strokeWidth="3.4" strokeLinejoin="round" />
+        <path d="M12 56 l -10 -4 M 12 62 l -10 5" stroke={O} strokeWidth="3.6" strokeLinecap="round" />
+        <circle cx="20" cy="54" r="4.4" fill="#fff0f6" stroke={O} strokeWidth="2" />
+        <circle cx="19" cy="54.6" r="2.2" fill="#3a0a20" />
+        <path d="M40 34 l 3 -10 M 54 32 l 2 -11 M 68 36 l 6 -9" stroke={O} strokeWidth="3.2" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function BarkskinMarauder() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible -scale-x-100">
+      <defs>
+        <linearGradient id="bm-bark" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#8a6a44" />
+          <stop offset="0.5" stopColor="#6a4f30" />
+          <stop offset="1" stopColor="#4a3620" />
+        </linearGradient>
+      </defs>
+      <g className="anim-lurch-slow">
+        <path d="M36 76 l -6 16 M 64 76 l 6 16" stroke={O} strokeWidth="9" strokeLinecap="round" />
+        <path d="M36 76 l -6 16 M 64 76 l 6 16" stroke="#4a3620" strokeWidth="5.6" strokeLinecap="round" />
+        <path d="M22 78 C 14 56 18 28 40 20 C 62 12 84 26 86 48 C 88 66 76 78 54 80 Z" fill="url(#bm-bark)" stroke={O} strokeWidth="3.6" strokeLinejoin="round" />
+        {/* bark plates — living wood, which is why a root finds nothing to hold */}
+        <path
+          d="M30 34 L 44 30 L 48 44 L 34 48 Z M 52 26 L 68 28 L 66 42 L 52 40 Z M 34 54 L 50 50 L 54 66 L 38 68 Z M 60 50 L 76 54 L 72 68 L 58 64 Z"
+          fill="#7a5c38"
+          stroke={O}
+          strokeWidth="2.4"
+          strokeLinejoin="round"
+          opacity="0.95"
+        />
+        <path d="M22 46 C 8 52 4 66 10 76" fill="none" stroke={O} strokeWidth="9" strokeLinecap="round" />
+        <path d="M22 46 C 8 52 4 66 10 76" fill="none" stroke="#6a4f30" strokeWidth="5.6" strokeLinecap="round" />
+        <path d="M84 44 C 96 52 98 66 92 74" fill="none" stroke={O} strokeWidth="9" strokeLinecap="round" />
+        <path d="M84 44 C 96 52 98 66 92 74" fill="none" stroke="#6a4f30" strokeWidth="5.6" strokeLinecap="round" />
+        <path d="M28 30 C 22 20 26 8 38 8 C 48 8 52 18 48 28 Z" fill="#5d452a" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+        <ellipse cx="36" cy="20" rx="6" ry="4.6" fill="#1a1208" stroke={O} strokeWidth="1.8" />
+        <circle cx="34" cy="20" r="2.2" fill="#ff9a3d" className="anim-breathe" />
+        <circle cx="58" cy="18" r="4.6" fill="#7fbf5f" opacity="0.6" />
+        <circle cx="78" cy="40" r="3.4" fill="#7fbf5f" opacity="0.5" />
+        <path d="M44 12 l 4 -8 M 52 14 l 6 -6" stroke="#8fd06a" strokeWidth="2.4" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function NightcapAssassin({ dashing }: { dashing: boolean }) {
+  return (
+    <svg viewBox="0 0 100 100" className={`h-full w-full overflow-visible -scale-x-100 ${dashing ? 'anim-cellshake' : ''}`}>
+      <defs>
+        <radialGradient id="na-cap" cx="0.4" cy="0.3" r="0.8">
+          <stop offset="0" stopColor="#5a4a8c" />
+          <stop offset="1" stopColor="#241a3e" />
+        </radialGradient>
+      </defs>
+      <g className={dashing ? undefined : 'anim-skitter'}>
+        {dashing && <path d="M96 30 L 66 30 M 98 46 L 72 46 M 94 62 L 68 62" stroke="#c9b8ee" strokeWidth="3" strokeLinecap="round" opacity="0.7" className="anim-twinkle" />}
+        <path d="M36 66 l -12 16 M 48 70 l -4 16 M 62 68 l 8 16 M 72 60 l 14 12" stroke={O} strokeWidth="3.4" strokeLinecap="round" className="anim-legs" />
+        <path d="M30 60 C 24 48 30 38 44 36 C 58 34 72 40 76 50 C 80 60 72 68 58 68 C 46 68 34 66 30 60 Z" fill="#3c3160" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+        <path d="M14 40 C 14 20 34 8 54 10 C 72 12 82 26 78 40 C 60 32 32 32 14 40 Z" fill="url(#na-cap)" stroke={O} strokeWidth="3.2" strokeLinejoin="round" />
+        <circle cx="34" cy="24" r="3.4" fill="#e6dcff" opacity="0.75" />
+        <circle cx="56" cy="20" r="2.6" fill="#e6dcff" opacity="0.65" />
+        <path d="M20 40 C 34 34 60 34 76 40 C 62 46 34 46 20 40 Z" fill="#150f28" stroke={O} strokeWidth="2" />
+        <circle cx="30" cy="44" r="4.6" fill="#ff5d7c" className="anim-breathe" />
+        <circle cx="29" cy="43.4" r="1.8" fill="#fff" opacity="0.85" />
+        <path d="M76 52 C 88 46 96 36 98 26" fill="none" stroke={O} strokeWidth="5" strokeLinecap="round" />
+        <path d="M76 52 C 88 46 96 36 98 26" fill="none" stroke="#dfe6ff" strokeWidth="2.6" strokeLinecap="round" />
+        <path d="M72 56 l 8 -6" stroke={O} strokeWidth="4" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function FenWretch() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible -scale-x-100">
+      <defs>
+        <radialGradient id="fw-belly" cx="0.45" cy="0.4" r="0.75">
+          <stop offset="0" stopColor="#8fae5a" />
+          <stop offset="0.65" stopColor="#5a7a3a" />
+          <stop offset="1" stopColor="#37501f" />
+        </radialGradient>
+      </defs>
+      <g className="anim-lurch">
+        {/* the aura: vapour rolling off it */}
+        <g className="anim-mist" opacity="0.5">
+          <ellipse cx="26" cy="26" rx="16" ry="9" fill="#a8d07a" />
+          <ellipse cx="66" cy="18" rx="13" ry="7" fill="#a8d07a" />
+          <ellipse cx="86" cy="34" rx="10" ry="6" fill="#a8d07a" />
+        </g>
+        <path d="M36 74 l -6 16 M 62 74 l 6 16" stroke={O} strokeWidth="6" strokeLinecap="round" className="anim-legs" />
+        <path d="M22 74 C 10 56 18 32 42 28 C 66 24 88 38 88 58 C 88 72 72 78 52 78 C 38 78 28 78 22 74 Z" fill="url(#fw-belly)" stroke={O} strokeWidth="3.4" strokeLinejoin="round" />
+        {/* stolen nectar sloshing inside it */}
+        <path d="M30 58 C 40 52 60 52 76 58 C 66 66 42 66 30 58 Z" fill="#ffd76a" opacity="0.55" className="anim-breathe" />
+        <path d="M34 44 C 32 52 32 62 36 70 M 54 40 C 52 50 52 62 56 72" stroke="#2f4419" strokeWidth="2.6" fill="none" strokeLinecap="round" opacity="0.7" />
+        <path d="M24 48 C 12 54 8 66 12 76" fill="none" stroke={O} strokeWidth="6" strokeLinecap="round" />
+        <path d="M86 46 C 96 54 98 66 94 74" fill="none" stroke={O} strokeWidth="6" strokeLinecap="round" />
+        <path d="M12 76 l -2 8 M 94 74 l 2 8" stroke="#7fae4a" strokeWidth="3" strokeLinecap="round" />
+        <path d="M32 34 C 28 24 34 14 46 14 C 56 14 60 24 56 32 Z" fill="#4a6a2c" stroke={O} strokeWidth="3" strokeLinejoin="round" />
+        <ellipse cx="42" cy="24" rx="7" ry="5" fill="#141c08" stroke={O} strokeWidth="1.8" />
+        <circle cx="40" cy="24" r="2.4" fill="#c8ff6a" className="anim-breathe" />
+        <path d="M36 30 C 40 34 48 34 52 30" stroke={O} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function HollowKing({ phase, immune }: { phase: number; immune: boolean }) {
+  const rage = phase >= 3;
+  const glow = rage ? '#ff3d3d' : immune ? '#7fd4ff' : '#d8a8ff';
+  return (
+    <svg viewBox="0 0 100 100" className={`h-full w-full overflow-visible -scale-x-100 ${rage ? 'anim-cellshake' : ''}`}>
+      <defs>
+        <linearGradient id="hk-body" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#4a3a5c" />
+          <stop offset="1" stopColor="#1d1528" />
+        </linearGradient>
+      </defs>
+      <g className="anim-lurch-slow">
+        {/* the crown */}
+        <path d="M30 26 L 22 4 L 34 16 L 38 0 L 46 16 L 54 2 L 60 18 L 70 6 L 68 26 Z" fill="#2c2138" stroke={O} strokeWidth="2.6" strokeLinejoin="round" />
+        <path d="M20 88 C 10 62 16 30 42 24 C 68 18 90 34 90 58 C 90 78 76 90 52 90 C 38 90 26 90 20 88 Z" fill="url(#hk-body)" stroke={O} strokeWidth="3.6" strokeLinejoin="round" />
+        {/* the hollow where a heart would be */}
+        <path d="M40 46 C 32 54 32 70 40 78 C 48 85 66 85 73 77 C 80 69 78 53 70 46 C 62 39 48 39 40 46 Z" fill="#0b0713" stroke={O} strokeWidth="2.8" />
+        <circle cx="56" cy="62" r={rage ? 11 : 9} fill={glow} className="anim-breathe" />
+        <circle cx="52" cy="58" r="3" fill="#fff" opacity="0.8" />
+        <path d="M28 40 l 8 12 l -5 12 M 84 44 l -8 10 l 6 12" stroke={glow} strokeWidth="2.4" fill="none" strokeLinecap="round" opacity="0.6" />
+        <path d="M20 52 C 4 60 0 78 8 90" fill="none" stroke={O} strokeWidth="10" strokeLinecap="round" />
+        <path d="M20 52 C 4 60 0 78 8 90" fill="none" stroke="#332743" strokeWidth="6.4" strokeLinecap="round" />
+        <path d="M88 50 C 100 60 102 78 96 88" fill="none" stroke={O} strokeWidth="10" strokeLinecap="round" />
+        <path d="M88 50 C 100 60 102 78 96 88" fill="none" stroke="#332743" strokeWidth="6.4" strokeLinecap="round" />
+        <path d="M28 40 C 22 28 28 14 44 14 C 58 14 64 28 58 38 Z" fill="#241a30" stroke={O} strokeWidth="3.2" strokeLinejoin="round" />
+        <ellipse cx="42" cy="28" rx="8" ry="6" fill="#0b0713" stroke={O} strokeWidth="2" />
+        <circle cx="40" cy="28" r="3" fill={glow} className="anim-breathe" />
+        {/* the ward: a shell of closed light while a damage type is denied */}
+        {immune && (
+          <g>
+            <circle cx="52" cy="56" r="46" fill="none" stroke="#7fd4ff" strokeWidth="3" opacity="0.5" className="anim-pulse-ring" />
+            <path d="M52 12 L 84 26 L 84 58 C 84 78 68 90 52 96 C 36 90 20 78 20 58 L 20 26 Z" fill="none" stroke="#7fd4ff" strokeWidth="2.6" opacity="0.45" />
+          </g>
+        )}
+      </g>
+    </svg>
+  );
+}
+
 export function EnemySprite({
   k,
   shellFrac = 0,
@@ -996,6 +1484,10 @@ export function EnemySprite({
   burrowed = false,
   windupFrac = 0,
   carrying = false,
+  molted = false,
+  shieldFrac = 0,
+  dashing = false,
+  warded = false,
 }: {
   k: EnemyKey;
   shellFrac?: number;
@@ -1004,6 +1496,10 @@ export function EnemySprite({
   burrowed?: boolean;
   windupFrac?: number;
   carrying?: boolean;
+  molted?: boolean; // Molt Wisp: this body has already split once
+  shieldFrac?: number; // Grovemaw Slug: how much damage reduction it is holding
+  dashing?: boolean; // Nightcap Assassin: mid-sprint
+  warded?: boolean; // Hollow King: a damage channel is currently shut off
 }) {
   switch (k) {
     case 'gnat': return <Gnat />;
@@ -1020,6 +1516,13 @@ export function EnemySprite({
     case 'imp': return <SporeImp />;
     case 'husk': return <GargantHusk windupFrac={windupFrac} />;
     case 'thief': return <RootThief carrying={carrying} />;
+    case 'wisp': return <MoltWisp spent={molted} />;
+    case 'slug': return <GrovemawSlug shieldFrac={shieldFrac} />;
+    case 'chitter': return <Chitterling />;
+    case 'marauder': return <BarkskinMarauder />;
+    case 'nightcap': return <NightcapAssassin dashing={dashing} />;
+    case 'wretch': return <FenWretch />;
+    case 'hollowking': return <HollowKing phase={phase} immune={warded} />;
   }
 }
 
@@ -1035,7 +1538,36 @@ export function EProjSprite() {
   );
 }
 
-export function ProjSprite({ kind }: { kind: 'thorn' | 'spike' | 'frost' | 'ray' | 'cinder' | 'root' | 'bind' }) {
+export function ProjSprite({ kind }: { kind: 'thorn' | 'spike' | 'frost' | 'ray' | 'cinder' | 'root' | 'bind' | 'bolt' | 'needle' | 'gale' }) {
+  if (kind === 'bolt')
+    return (
+      <svg viewBox="0 0 40 22" className="h-full w-full overflow-visible">
+        <path d="M2 11 L 12 11" stroke="#8a7350" strokeWidth="4" strokeLinecap="round" opacity="0.7" />
+        <path d="M12 4 L 34 4 L 38 11 L 34 18 L 12 18 Z" fill="url(#boltIron)" stroke={O2} strokeWidth="2" strokeLinejoin="round" />
+        <defs>
+          <linearGradient id="boltIron" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#cdd6de" />
+            <stop offset="1" stopColor="#5d6a78" />
+          </linearGradient>
+        </defs>
+        <path d="M18 7 L 30 7 M 18 15 L 30 15" stroke="#39424d" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  if (kind === 'needle')
+    return (
+      <svg viewBox="0 0 30 10" className="h-full w-full overflow-visible">
+        <path d="M0 5 L 18 5" stroke="#cfe0a0" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+        <path d="M14 1 L 30 5 L 14 9 Z" fill="#e8f0c8" stroke={O2} strokeWidth="1.4" strokeLinejoin="round" />
+      </svg>
+    );
+  if (kind === 'gale')
+    return (
+      <svg viewBox="0 0 44 30" className="h-full w-full overflow-visible">
+        <path d="M40 8 C 26 4 10 6 4 12" fill="none" stroke="#dff5ff" strokeWidth="3.4" strokeLinecap="round" opacity="0.95" />
+        <path d="M42 16 C 28 12 12 14 2 20" fill="none" stroke="#a8e0f0" strokeWidth="3" strokeLinecap="round" opacity="0.8" />
+        <path d="M38 24 C 26 22 16 24 10 28" fill="none" stroke="#dff5ff" strokeWidth="2.4" strokeLinecap="round" opacity="0.65" />
+      </svg>
+    );
   if (kind === 'cinder')
     return (
       <svg viewBox="0 0 32 26" className="h-full w-full overflow-visible">
